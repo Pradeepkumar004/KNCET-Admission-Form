@@ -15,6 +15,11 @@ const AcademicScores = () => {
     ]);
 
     const [uploads, setUploads] = useState([]);
+    const [mediumOfStudy, setMediumOfStudy] = useState("");
+    const [otherMedium, setOtherMedium] = useState("");
+    const [schoolName, setSchoolName] = useState("");
+    const [registerNumber, setRegisterNumber] = useState("");
+    const [yearOfPassing, setYearOfPassing] = useState("");
 
     const handleScoreChange = (index, value) => {
         const newScores = [...scores];
@@ -23,6 +28,20 @@ const AcademicScores = () => {
     };
 
     const handleNavigate = () => {
+        // Save academic scores data to localStorage
+        const academicData = {
+            schoolName,
+            registerNumber,
+            medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
+            yearOfPassing,
+            scores: scores,
+            totalMarks,
+            percentage,
+            cutoff,
+            courseType: "CBSE"
+        };
+        localStorage.setItem('academicScoresData', JSON.stringify(academicData));
+        
         navigate("/success");
     }
 
@@ -77,17 +96,65 @@ const AcademicScores = () => {
                         CBSC Scores
                     </h2>
 
-                    <div className="flex flex-row mt-5">
-                        <div className="grid">
-                            <label className="font-semibold text-gray-600">Medium of Study</label>
-                            <select className="  px-3 py-2 mt-1 w-120 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " required>
-                                <option value="english">English</option>
-                                <option value="other">Other</option>
-                            </select>
+                    <div className="grid grid-cols-2 gap-4 mt-5">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
+                            <input 
+                                type="text" 
+                                value={schoolName}
+                                onChange={(e) => setSchoolName(e.target.value)}
+                                placeholder="Enter School Name & Place" 
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
+                                required 
+                            />
                         </div>
-                        <div className=" grid ml-6 gap-3">
-                            <label>Year of Passing</label>
-                            <input type="text" placeholder="Year of Passing" className="input  px-3 py-2 mt-1 w-60 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number</label>
+                            <input 
+                                type="text" 
+                                value={registerNumber}
+                                onChange={(e) => setRegisterNumber(e.target.value)}
+                                placeholder="Enter Register Number" 
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
+                                required 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-5">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study</label>
+                            <select 
+                                value={mediumOfStudy} 
+                                onChange={(e) => setMediumOfStudy(e.target.value)} 
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
+                                required
+                            >
+                                <option value="">Select Medium</option>
+                                <option value="English">English</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            {mediumOfStudy === "Other" && (
+                                <input 
+                                    type="text" 
+                                    value={otherMedium}
+                                    onChange={(e) => setOtherMedium(e.target.value)}
+                                    placeholder="Please specify medium" 
+                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mt-2" 
+                                    required 
+                                />
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing</label>
+                            <input 
+                                type="text" 
+                                value={yearOfPassing}
+                                onChange={(e) => setYearOfPassing(e.target.value)}
+                                placeholder="Year of Passing" 
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
+                                required 
+                            />
                         </div>
                     </div>
 
@@ -156,38 +223,6 @@ const AcademicScores = () => {
                                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
                             />
                         </div>
-                    </div>
-
-                    {/* Upload Documents */}
-                    <h3 className="mt-8 text-lg font-semibold text-gray-700">
-                        Upload Documents
-                    </h3>
-                    <div className="mt-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <p className="text-gray-500 text-sm mb-2">Drag and drop or browse</p>
-                        <p className="text-xs text-gray-400 mb-4">
-                            Upload your HSC mark sheets and certificates here.
-                        </p>
-                        <input
-                            type="file"
-                            multiple
-                            onChange={handleUploadChange}
-                            className="hidden "
-                            id="file-upload"
-                        />
-                        <label
-                            htmlFor="file-upload"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer"
-                        >
-                            Browse Files
-                        </label>
-
-                        {uploads.length > 0 && (
-                            <ul className="mt-2 text-sm text-gray-600">
-                                {uploads.map((file, i) => (
-                                    <li key={i}>{file.name}</li>
-                                ))}
-                            </ul>
-                        )}
                     </div>
 
                     {/* Submit */}
