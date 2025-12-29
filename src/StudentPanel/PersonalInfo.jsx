@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 
 const PersonalInfo = () => {
 
-  const [photo, setPhoto] = useState(null);
   const [formData, setFormData] = useState({
     preference1: '',
     preference2: '',
@@ -53,7 +52,7 @@ const PersonalInfo = () => {
     { id: 6, department: "ECE(Electronics and Communication Engineering )" },
     { id: 7, department: "EEE(Electrical and Electronics Engineering)" },
     { id: 8, department: "IT(Information Technology)" },
-    { id: 8, department: "MECH(Mechanical Engineering)" },
+    { id: 9, department: "MECH(Mechanical Engineering)" },
   ]
 
   const Address = [
@@ -93,7 +92,7 @@ const PersonalInfo = () => {
     } else if (formData.lastStudies === 'CBSE') {
       navigate("/CBSEInfo");
     } else {
-      navigate("/SSLCInfo");
+      navigate("/HSCInfo");
     }
   }
 
@@ -181,14 +180,6 @@ const PersonalInfo = () => {
   };
 
 
-  const handlePhotoUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setPhoto(URL.createObjectURL(file));
-    }
-  };
-
-
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       {/* Top Navigation / Logo Bar */}
@@ -226,91 +217,69 @@ const PersonalInfo = () => {
           </div>
 
           <form className="p-8 space-y-10" onSubmit={handleSubmit}>
-            {/* Top Grid: Degree, Quota, Photo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Degree / Department Preferences</label>
-                  <div className="space-y-3">
-                    <select name="preference1" value={formData.preference1} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none">
-                      <option value="" disabled>1st Preference</option>
-                      {degree.map((dept, index) => (
-                        <option key={index} value={dept.department}>{dept.department}</option>
-                      ))}
-                    </select>
-                    <select name="preference2" value={formData.preference2} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none">
-                      <option value="" disabled>2nd Preference</option>
-                      {degree.map((dept, index) => (
-                        <option key={index} value={dept.department} disabled={dept.department === formData.preference1}>{dept.department}</option>
-                      ))}
-                    </select>
-                    <select name="preference3" value={formData.preference3} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none">
-                      <option value="" disabled>3rd Preference</option>
-                      {degree.map((dept, index) => (
-                        <option key={index} value={dept.department} disabled={dept.department === formData.preference1 || dept.department === formData.preference2}>{dept.department}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Seat Type</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="flex items-center justify-center border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                      <input type="radio" name="quota" value="Management" checked={formData.quota === "Management"} onChange={handleChange} className="hidden" />
-                      <span className="font-medium">Management</span>
-                    </label>
-                    <label className="flex items-center justify-center border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                      <input type="radio" name="quota" value="Government" checked={formData.quota === "Government"} onChange={handleChange} className="hidden" />
-                      <span className="font-medium">Government</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Passport Photo</label>
-                <div className="relative group border-2 border-dashed border-gray-300 rounded-2xl p-4 bg-gray-50 hover:bg-white hover:border-blue-400 transition-all text-center">
-                  {photo ? (
-                    <div className="relative inline-block">
-                      <img src={photo} alt="Preview" className="h-44 w-44 object-cover rounded-xl shadow-md border-2 border-white" />
-                      <label htmlFor="photoUpload" className="absolute -bottom-2 -right-2 p-2 bg-blue-600 text-white rounded-full shadow-lg cursor-pointer hover:bg-blue-700">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </label>
-                    </div>
-                  ) : (
-                    <label htmlFor="photoUpload" className="cursor-pointer flex flex-col items-center justify-center py-6">
-                      <div className="bg-blue-100 p-4 rounded-full mb-3 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-medium text-gray-600">Upload Photo</span>
-                      <span className="text-xs text-gray-400 mt-1">JPEG/PNG, Max 2MB</span>
-                    </label>
-                  )}
-                  <input type="file" accept="image/*" id="photoUpload" onChange={handlePhotoUpload} className="hidden" />
-                </div>
+            {/* Degree Preferences */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Degree / Department Preferences</label>
+              <div className="space-y-3">
+                <select name="preference1" value={formData.preference1} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none">
+                  <option value="" disabled>1st Preference</option>
+                  {degree.map((dept, index) => (
+                    <option key={index} value={dept.department}>{dept.department}</option>
+                  ))}
+                </select>
+                <select name="preference2" value={formData.preference2} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none">
+                  <option value="" disabled>2nd Preference</option>
+                  {degree.map((dept, index) => (
+                    <option key={index} value={dept.department} disabled={dept.department === formData.preference1}>{dept.department}</option>
+                  ))}
+                </select>
+                <select name="preference3" value={formData.preference3} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none">
+                  <option value="" disabled>3rd Preference</option>
+                  {degree.map((dept, index) => (
+                    <option key={index} value={dept.department} disabled={dept.department === formData.preference1 || dept.department === formData.preference2}>{dept.department}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <hr className="border-gray-100" />
 
-            {/* Middle Grid: Admission, Name, Email, DOB */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              <div className="col-span-full">
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Admission Type</label>
-                <div className="flex space-x-4 max-w-md">
-                  <label className="flex-1 flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                    <input type="radio" name="entry" value="I Year" checked={formData.entry === "I Year"} onChange={handleChange} className="hidden" />
-                    <span className="font-medium">I Year</span>
-                  </label>
-                  <label className="flex-1 flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                    <input type="radio" name="entry" value="Lateral Entry" checked={formData.entry === "Lateral Entry"} onChange={handleChange} className="hidden" />
-                    <span className="font-medium">Lateral Entry</span>
-                  </label>
-                </div>
+            {/* Quota Section */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Seat Type</label>
+              <div className="grid grid-cols-2 gap-4 max-w-md">
+                <label className="flex items-center justify-center border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
+                  <input type="radio" name="quota" value="Management" checked={formData.quota === "Management"} onChange={handleChange} className="hidden" />
+                  <span className="font-medium">Management</span>
+                </label>
+                <label className="flex items-center justify-center border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
+                  <input type="radio" name="quota" value="Government" checked={formData.quota === "Government"} onChange={handleChange} className="hidden" />
+                  <span className="font-medium">Government</span>
+                </label>
               </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Admission Type */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Admission Type</label>
+              <div className="flex space-x-4 max-w-md">
+                <label className="flex-1 flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
+                  <input type="radio" name="entry" value="I Year" checked={formData.entry === "I Year"} onChange={handleChange} className="hidden" />
+                  <span className="font-medium">I Year</span>
+                </label>
+                <label className="flex-1 flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
+                  <input type="radio" name="entry" value="Lateral Entry" checked={formData.entry === "Lateral Entry"} onChange={handleChange} className="hidden" />
+                  <span className="font-medium">Lateral Entry</span>
+                </label>
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Personal Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
@@ -472,12 +441,9 @@ const PersonalInfo = () => {
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">SSLC Marks</label>
                     <input type="text" name="sslcMarks" value={formData.sslcMarks} onChange={handleChange} placeholder="Enter SSLC Marks out of 500" className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Location</label>
-                    <input type="text" name="schoolName" value={formData.schoolName} onChange={handleChange} placeholder="Government High School, Thottiam" className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
-                  </div>
+                 
                   <div className="flex items-center space-x-6 pt-2">
-                    <span className="text-sm font-bold text-gray-700">Govt School (6th-12th)?</span>
+                    <span className="text-sm font-bold text-gray-700">Are you Studied Govt School (6th-12th)?</span>
                     <div className="flex space-x-3">
                       <label className="flex items-center space-x-1.5 cursor-pointer">
                         <input type="radio" name="govtSchool" value="Yes" checked={formData.govtSchool === "Yes"} onChange={handleChange} className="w-4 h-4 text-blue-600" />

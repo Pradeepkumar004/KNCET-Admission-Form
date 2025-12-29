@@ -77,6 +77,17 @@ const AcademicScores = () => {
             HSC State Board Scores
           </h2>
 
+          <div className="grid grid-cols-2 gap-4 mt-5">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
+              <input type="text" placeholder="Enter School Name & Place" className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number</label>
+              <input type="text" placeholder="Enter Register Number" className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
+            </div>
+          </div>
+
           <div className="flex flex-row mt-5">
             <div className="grid">
               <label className="font-semibold text-gray-600">Medium of Study</label>
