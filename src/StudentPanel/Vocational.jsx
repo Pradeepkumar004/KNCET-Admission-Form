@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/kongunadulogo.png"
 
-const AcademicScores = () => {
+const VocationalScores = () => {
     const navigate = useNavigate();
 
     const [scores, setScores] = useState([
-
+        { subject: "Tamil", max: 100, obtained: "" },
         { subject: "English", max: 100, obtained: "" },
         { subject: "Mathematics", max: 100, obtained: "" },
         { subject: "Physics", max: 100, obtained: "" },
@@ -55,7 +55,7 @@ const AcademicScores = () => {
         const enquiryId = `KN26EQ${paddedEnqCount}`;
 
         // Save academic scores data to localStorage
-        const academicData = {
+        const vocationalData = {
             enquiryId,
             schoolName,
             registerNumber,
@@ -65,9 +65,9 @@ const AcademicScores = () => {
             totalMarks,
             percentage,
             cutoff,
-            courseType: "CBSE"
+            courseType: "Vocational"
         };
-        localStorage.setItem('academicScoresData', JSON.stringify(academicData));
+        localStorage.setItem('academicScoresData', JSON.stringify(vocationalData));
 
         navigate("/success", { state: { enquiryId } });
     }
@@ -104,6 +104,9 @@ const AcademicScores = () => {
     const cutoff = calculateCutoff();
     // --- ADDED CUTOFF LOGIC END ---
 
+    {/* Eligibility */ }
+    const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
+
     const [termsAccepted, setTermsAccepted] = useState(false);
 
     return (
@@ -120,7 +123,7 @@ const AcademicScores = () => {
                 <div className="max-w-4xl w-full bg-white shadow p-6 rounded-md">
 
                     <h2 className=" text-4xl font-semibold text-gray-800">
-                        CBSC Scores
+                        Vocational Scores
                     </h2>
 
                     <div className="grid grid-cols-2 gap-4 mt-5">
@@ -158,6 +161,7 @@ const AcademicScores = () => {
                                 required
                             >
                                 <option value="">Select Medium</option>
+                                <option value="Tamil">Tamil</option>
                                 <option value="English">English</option>
                                 <option value="Other">Other</option>
                             </select>
@@ -202,7 +206,7 @@ const AcademicScores = () => {
                                         <td className="p-3 border text-center">{s.max}</td>
                                         <td className="p-3 border">
                                             <input
-                                                type="number"
+                                                type=""
                                                 min="0"
                                                 max="100"
                                                 value={s.obtained}
@@ -219,6 +223,8 @@ const AcademicScores = () => {
 
                     {/* Totals */}
                     <div className="grid md:grid-cols-2 gap-4 mt-6">
+                        {/* Total Marks */}
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Total Marks
@@ -230,6 +236,8 @@ const AcademicScores = () => {
                                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
                             />
                         </div>
+                        {/* Percentage */}
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Percentage
@@ -241,6 +249,8 @@ const AcademicScores = () => {
                                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
                             />
                         </div>
+                        {/* Cutoff */}
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 CutOff
@@ -252,15 +262,17 @@ const AcademicScores = () => {
                                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
                             />
                         </div>
+                        {/* Eligiblity */}
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Eligibility
+                                Eligiblity
                             </label>
                             <input
                                 type="text"
-                                value={cutoff >= 40 ? "Eligible" : "Not Eligible"}
+                                value={eligibility}
                                 readOnly
-                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
+                                className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
                             />
                         </div>
                     </div>
@@ -293,4 +305,4 @@ const AcademicScores = () => {
     );
 };
 
-export default AcademicScores;
+export default VocationalScores;

@@ -1,6 +1,7 @@
 import React from "react";
 import Logo from "../assets/kongunadulogo.png";
 import { useLocation } from "react-router-dom";
+import Nav from "../Nav";
 
 const Sucess = () => {
     const location = useLocation();
@@ -8,6 +9,9 @@ const Sucess = () => {
 
     return (
         <>
+            <div>
+              <Nav/>
+            </div>
             <div className="grid justify-center gap-5 text-center py-9">
                 <div>
                     <img src={Logo} className="ml-30" alt="Logo" />

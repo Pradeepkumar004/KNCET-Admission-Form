@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PDFPreviewModal from './PDFPreviewModal';
+import Nav from "../Nav";
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
 
@@ -455,6 +456,9 @@ export default function EditApplicationModal({
 
   return (
     <>
+    <div>
+      <Nav/>
+    </div>
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full my-8">
           {/* Modal Header */}
@@ -1007,9 +1011,9 @@ export default function EditApplicationModal({
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 >
                   <option value="Registered">Registered</option>
-                  <option value="Approved">Approved</option>
+                  <option value="Admitted">Admitted</option>
                   <option value="Pending">Pending</option>
-                  <option value="Rejected">Rejected</option>
+                  <option value="Cancel">Cancel</option>
                 </select>
               </div>
             </div>

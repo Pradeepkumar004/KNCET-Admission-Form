@@ -22,14 +22,41 @@ const AcademicScores = () => {
   const [yearOfPassing, setYearOfPassing] = useState("");
 
   const handleScoreChange = (index, value) => {
-    const newScores = [...scores];
-    newScores[index].obtained = value;
-    setScores(newScores);
+    // allow empty string for deletion
+    if (value === "") {
+      const newScores = [...scores];
+      newScores[index].obtained = value;
+      setScores(newScores);
+      return;
+    }
+
+    const numVal = parseFloat(value);
+    // check if it is a number and within range 0-100
+    if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
+      const newScores = [...scores];
+      newScores[index].obtained = value;
+      setScores(newScores);
+    }
   };
 
   const handleNavigate = () => {
+    // Generate Enquiry ID
+    let currentEnqId = localStorage.getItem("enqIdCounter");
+    if (!currentEnqId) {
+      currentEnqId = 0;
+    } else {
+      currentEnqId = parseInt(currentEnqId);
+    }
+    currentEnqId += 1;
+    localStorage.setItem("enqIdCounter", currentEnqId);
+
+    // Format: KN26EQ0001
+    const paddedEnqCount = String(currentEnqId).padStart(4, '0');
+    const enquiryId = `KN26EQ${paddedEnqCount}`;
+
     // Save academic scores data to localStorage
     const academicData = {
+      enquiryId,
       schoolName,
       registerNumber,
       medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
@@ -41,8 +68,8 @@ const AcademicScores = () => {
       courseType: "HSC State Board"
     };
     localStorage.setItem('academicScoresData', JSON.stringify(academicData));
-    
-    navigate("/success");
+
+    navigate("/success", { state: { enquiryId } });
   }
 
   const handleUploadChange = (e) => {
@@ -77,6 +104,9 @@ const AcademicScores = () => {
   const cutoff = calculateCutoff();
   // --- ADDED CUTOFF LOGIC END ---
 
+  {/* Eligibility */ }
+  const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
+
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   return (
@@ -99,24 +129,24 @@ const AcademicScores = () => {
           <div className="grid grid-cols-2 gap-4 mt-5">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={schoolName}
                 onChange={(e) => setSchoolName(e.target.value)}
-                placeholder="Enter School Name & Place" 
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
-                required 
+                placeholder="Enter School Name & Place"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                required
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={registerNumber}
                 onChange={(e) => setRegisterNumber(e.target.value)}
-                placeholder="Enter Register Number" 
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
-                required 
+                placeholder="Enter Register Number"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                required
               />
             </div>
           </div>
@@ -124,10 +154,10 @@ const AcademicScores = () => {
           <div className="grid grid-cols-2 gap-4 mt-5">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study</label>
-              <select 
-                value={mediumOfStudy} 
-                onChange={(e) => setMediumOfStudy(e.target.value)} 
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
+              <select
+                value={mediumOfStudy}
+                onChange={(e) => setMediumOfStudy(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
                 required
               >
                 <option value="">Select Medium</option>
@@ -136,25 +166,25 @@ const AcademicScores = () => {
                 <option value="Other">Other</option>
               </select>
               {mediumOfStudy === "Other" && (
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={otherMedium}
                   onChange={(e) => setOtherMedium(e.target.value)}
-                  placeholder="Please specify medium" 
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mt-2" 
-                  required 
+                  placeholder="Please specify medium"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mt-2"
+                  required
                 />
               )}
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={yearOfPassing}
                 onChange={(e) => setYearOfPassing(e.target.value)}
-                placeholder="Year of Passing" 
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" 
-                required 
+                placeholder="Year of Passing"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                required
               />
             </div>
           </div>
@@ -176,7 +206,9 @@ const AcademicScores = () => {
                     <td className="p-3 border text-center">{s.max}</td>
                     <td className="p-3 border">
                       <input
-                        type="number"
+                        type=""
+                        min="0"
+                        max="100"
                         value={s.obtained}
                         onChange={(e) => handleScoreChange(idx, e.target.value)}
                         placeholder="Enter marks"
@@ -191,6 +223,8 @@ const AcademicScores = () => {
 
           {/* Totals */}
           <div className="grid md:grid-cols-2 gap-4 mt-6">
+            {/* Total Marks */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Total Marks
@@ -202,6 +236,8 @@ const AcademicScores = () => {
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
               />
             </div>
+            {/* Percentage */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Percentage
@@ -213,6 +249,8 @@ const AcademicScores = () => {
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
               />
             </div>
+            {/* Cutoff */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 CutOff
@@ -222,6 +260,19 @@ const AcademicScores = () => {
                 value={cutoff} // Corrected: Now displays calculated value
                 readOnly
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
+              />
+            </div>
+            {/* Eligiblity */}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Eligiblity
+              </label>
+              <input
+                type="text"
+                value={eligibility}
+                readOnly
+                className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
               />
             </div>
           </div>

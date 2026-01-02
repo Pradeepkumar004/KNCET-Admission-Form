@@ -4,6 +4,7 @@ import './App.css'
 import PersonalInfo from './StudentPanel/PersonalInfo'
 import AcademicScores from './StudentPanel/AcadamicScore'
 import FeesInfo from './FeesPanel/FeesInfo'
+import VocationalScores from './StudentPanel/Vocational'
 
 import Sucess from './StudentPanel/success'
 import AdminSuccess from './AdminPanel/success'
@@ -26,9 +27,14 @@ function App() {
         <Route path='/PersonalInfo' element={<PersonalInfo />} />
         <Route path='/HSCInfo' element={<AcademicScores />} />
         <Route path='/CBSEInfo' element={<CBSEScore />} />
-        <Route path='/feesInfo' element={<FeesInfo />} />
-        <Route path='/success' element={<Sucess />} />
         <Route path='/diplomaInfo' element={<DiplomaScores />} />
+        <Route path='/VocationalInfo' element={<VocationalScores />} />
+        <Route path='/success' element={<Sucess />} />
+
+
+        <Route path='/feesInfo' element={<FeesInfo />} />
+
+
 
         {/* AdminPanel */}
 

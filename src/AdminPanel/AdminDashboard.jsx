@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SearchIcon } from "@heroicons/react/solid";
-import logo from "../assets/kongunadulogo.png";
+// import logo from "../assets/kongunadulogo.png";
+import Nav from "../Nav";
 import EditApplicationModal from "./EditApplicationModal";
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
@@ -97,9 +98,9 @@ export default function Dashboard() {
   // Dynamic counts
   const totalCount = applications.length;
   const registeredCount = totalCount; // All data coming in are registered students
-  const approvedCount = applications.filter(app => app.status === "Approved").length;
-  const pendingCount = applications.filter(app => app.status === "Pending").length;
-  const rejectedCount = applications.filter(app => app.status === "Rejected").length;
+  const AdmittedCount = applications.filter(app => app.status === "Admitted").length;
+  const PendingCount = applications.filter(app => app.status === "Pending").length;
+  const cancelCount = applications.filter(app => app.status === "cancel").length;
 
   const handleApplicationClick = () => {
     // Empty for now
@@ -130,14 +131,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       {/* Top Navigation / Logo Bar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <Nav/>
+      {/* <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center space-x-4">
           <img src={logo} alt="KNCET Logo" className="h-12 w-auto" />
           <h1 className="text-xl font-bold text-gray-800 tracking-tight">
             Kongunadu College of Engineering and Technology
           </h1>
         </div>
-      </nav>
+      </nav> */}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="space-y-8">
@@ -176,15 +178,15 @@ export default function Dashboard() {
               </div>
 
               <div
-                onClick={() => setFilterStatus(filterStatus === "Approved" ? "All" : "Approved")}
-                className={`bg-white p-6 rounded-2xl shadow-sm border ${filterStatus === "Approved" ? "border-green-500 ring-2 ring-green-200" : "border-gray-100"} flex items-center space-x-4 transition-all hover:translate-y-[-2px] cursor-pointer hover:shadow-md`}
+                onClick={() => setFilterStatus(filterStatus === "Admitted" ? "All" : "Admitted")}
+                className={`bg-white p-6 rounded-2xl shadow-sm border ${filterStatus === "Admitted" ? "border-green-500 ring-2 ring-green-200" : "border-gray-100"} flex items-center space-x-4 transition-all hover:translate-y-[-2px] cursor-pointer hover:shadow-md`}
               >
                 <div className="p-3 bg-green-100 text-green-600 rounded-xl">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Approved</p>
-                  <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
+                  <p className="text-sm font-medium text-gray-500">Admitted</p>
+                  <p className="text-2xl font-bold text-green-600">{AdmittedCount}</p>
                 </div>
               </div>
 
@@ -197,20 +199,20 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+                  <p className="text-2xl font-bold text-yellow-600">{PendingCount}</p>
                 </div>
               </div>
 
               <div
-                onClick={() => setFilterStatus(filterStatus === "Rejected" ? "All" : "Rejected")}
-                className={`bg-white p-6 rounded-2xl shadow-sm border ${filterStatus === "Rejected" ? "border-red-500 ring-2 ring-red-200" : "border-gray-100"} flex items-center space-x-4 transition-all hover:translate-y-[-2px] cursor-pointer hover:shadow-md`}
+                onClick={() => setFilterStatus(filterStatus === "cancel" ? "All" : "cancel")}
+                className={`bg-white p-6 rounded-2xl shadow-sm border ${filterStatus === "cancel" ? "border-red-500 ring-2 ring-red-200" : "border-gray-100"} flex items-center space-x-4 transition-all hover:translate-y-[-2px] cursor-pointer hover:shadow-md`}
               >
                 <div className="p-3 bg-red-100 text-red-600 rounded-xl">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Rejected</p>
-                  <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
+                  <p className="text-sm font-medium text-gray-500">Cancel</p>
+                  <p className="text-2xl font-bold text-red-600">{cancelCount}</p>
                 </div>
               </div>
             </>
@@ -247,7 +249,7 @@ export default function Dashboard() {
                 <thead className="bg-gray-50/50">
                   <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
                     <th className="px-6 py-4">Student Details</th>
-                    <th className="px-6 py-4">{["Registered", "Rejected", "Pending"].includes(filterStatus) ? "Enquiry ID" : "Email ID"}</th>
+                    <th className="px-6 py-4">{["Registered", "cancel", "Pending"].includes(filterStatus) ? "Enquiry ID" : "Email ID"}</th>
                     <th className="px-6 py-4">Department</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">Submitted</th>
@@ -277,14 +279,14 @@ export default function Dashboard() {
                         <div className="text-sm font-medium text-gray-700">{app.department}</div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className={`flex items-center text-xs font-bold ${app.status === "Approved" ? "text-green-600 bg-green-50 border-green-100" :
+                        <span className={`flex items-center text-xs font-bold ${app.status === "Admitted" ? "text-green-600 bg-green-50 border-green-100" :
                           app.status === "Pending" ? "text-yellow-600 bg-yellow-50 border-yellow-100" :
-                            app.status === "Rejected" ? "text-red-600 bg-red-50 border-red-100" :
+                            app.status === "cancel" ? "text-red-600 bg-red-50 border-red-100" :
                               "text-blue-600 bg-blue-50 border-blue-100"
                           } px-2 py-1 rounded-full w-max border`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${app.status === "Approved" ? "bg-green-500" :
+                          <span className={`w-1.5 h-1.5 rounded-full ${app.status === "Admitted" ? "bg-green-500" :
                             app.status === "Pending" ? "bg-yellow-500" :
-                              app.status === "Rejected" ? "bg-red-500" :
+                              app.status === "cancel" ? "bg-red-500" :
                                 "bg-blue-500"
                             } mr-2 animate-pulse`}></span>
                           {app.status}

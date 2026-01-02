@@ -13,6 +13,20 @@ const DiplomaScores = () => {
     { subject: "Computer Applications", max: 100, obtained: "" },
   ]);
 
+  const [fifthSemMarks, setFifthSemMarks] = useState("");
+  const [sixthSemMarks, setSixthSemMarks] = useState("");
+
+  const handleSemesterMarkChange = (value, setter) => {
+    if (value === "") {
+      setter(value);
+      return;
+    }
+    const numVal = parseFloat(value);
+    if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
+      setter(value);
+    }
+  };
+
   // Upload files state
   const [uploads, setUploads] = useState([]);
 
@@ -23,13 +37,51 @@ const DiplomaScores = () => {
   });
 
   const handleScoreChange = (index, value) => {
-    const newScores = [...diplomaScores];
-    newScores[index].obtained = value;
-    setDiplomaScores(newScores);
+    // allow empty string for deletion
+    if (value === "") {
+      const newScores = [...diplomaScores];
+      newScores[index].obtained = value;
+      setDiplomaScores(newScores);
+      return;
+    }
+
+    const numVal = parseFloat(value);
+    // check if it is a number and within range 0-100
+    if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
+      const newScores = [...diplomaScores];
+      newScores[index].obtained = value;
+      setDiplomaScores(newScores);
+    }
   };
 
   const handleNavigate = () => {
-    navigate("/success");
+    // Generate Enquiry ID
+    let currentEnqId = localStorage.getItem("enqIdCounter");
+    if (!currentEnqId) {
+      currentEnqId = 0;
+    } else {
+      currentEnqId = parseInt(currentEnqId);
+    }
+    currentEnqId += 1;
+    localStorage.setItem("enqIdCounter", currentEnqId);
+
+    // Format: KN26EQ0001
+    const paddedEnqCount = String(currentEnqId).padStart(4, '0');
+    const enquiryId = `KN26EQ${paddedEnqCount}`;
+
+    // Save to local storage if needed, similar to other forms
+    const diplomaData = {
+      enquiryId,
+      diplomaScores,
+      diplomaDetails,
+      totalMarks,
+      percentage,
+      fifthSemMarks,
+      sixthSemMarks
+    };
+    localStorage.setItem('academicScoresData', JSON.stringify(diplomaData));
+
+    navigate("/success", { state: { enquiryId } });
   }
 
   const handleUploadChange = (e) => {
@@ -120,6 +172,8 @@ const DiplomaScores = () => {
                     <td className="p-3 border">
                       <input
                         type="number"
+                        min="0"
+                        max="100"
                         value={s.obtained}
                         onChange={(e) => handleScoreChange(idx, e.target.value)}
                         placeholder="Enter marks"
@@ -157,6 +211,53 @@ const DiplomaScores = () => {
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
               />
             </div>
+            {/* upto 5th sem */}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                5th semester
+              </label>
+              <input
+                // type="number"
+                min="0"
+                max="100"
+                value={fifthSemMarks}
+                onChange={(e) => handleSemesterMarkChange(e.target.value, setFifthSemMarks)}
+                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+              />
+            </div>
+
+
+            {/* upto 6th sem */}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                6th semester
+              </label>
+              <input
+                // type="number"
+                min="0"
+                max="100"
+                value={sixthSemMarks}
+                onChange={(e) => handleSemesterMarkChange(e.target.value, setSixthSemMarks)}
+                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+              />
+            </div>
+
+
+            {/* eligiblity */}
+
+            {/* <div>
+                <label className="block text-sm font-medium text-gray-700">
+                    Eligibility
+                </label>
+                <input
+                    type="text"
+                    value={percentage >= 40 ? "Eligible" : "Not Eligible"}
+                    readOnly
+                    className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
+                />
+            </div> */}
           </div>
 
           {/* Upload Documents */}

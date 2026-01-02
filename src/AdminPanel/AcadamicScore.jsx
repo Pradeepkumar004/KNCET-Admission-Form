@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/kongunadulogo.png"
 import PDFPreviewModal from './PDFPreviewModal';
+import Nav from "../Nav";
 
 const AcademicScores = () => {
   const navigate = useNavigate();
@@ -117,11 +118,14 @@ const AcademicScores = () => {
   return (
     <>
       {/* top */}
-      <div className="py-1 ml-10 flex flex-row font-bold ">
+      {/* <div className="py-1 ml-10 flex flex-row font-bold ">
         <img src={logo} className="w-10  " alt="Logo" />
         <h1 className="py-5  px-3 text-2xl mt-3 ">
           Kongunadu college of Engineering and Technology
         </h1>
+      </div> */}
+      <div>
+        <Nav/>
       </div>
 
       <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">

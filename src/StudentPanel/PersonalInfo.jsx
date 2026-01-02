@@ -172,7 +172,7 @@ const PersonalInfo = () => {
       if (result.success) {
         // Save form data to localStorage for PDF generation
         localStorage.setItem('submittedFormData', JSON.stringify(submissionData));
-        
+
         // Keep loading screen visible for a moment before navigation
         setTimeout(() => {
           setIsLoading(false);
@@ -334,7 +334,7 @@ const PersonalInfo = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Email Address</label>
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Email Address <span className="text-[10px]">(OPTIONAL)</span></label>
                 <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
               </div>
 
@@ -425,9 +425,19 @@ const PersonalInfo = () => {
                 <input type="text" name="caste" value={formData.caste} onChange={handleChange} placeholder="Caste" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
               </div>
 
+              {/* Anuual income */}
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Annual Family Income</label>
-                <input type="number" name="annualIncome" value={formData.annualIncome} onChange={handleChange} placeholder="₹" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
+                <select name="annualIncome" value={formData.annualIncome} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required>
+                  <option value="" disabled>Select Income Range</option>
+                  <option value="Less than 1 Lakh">Less than 1 Lakh</option>
+                  <option value="1 Lakh to 1.5 Lakhs">1 Lakh to 1.5 Lakhs</option>
+                  <option value="1.5 Lakhs to 2.5 Lakhs">1.5 Lakhs to 2.5 Lakhs</option>
+                  <option value="2.5 Lakhs to 5 Lakhs">2.5 Lakhs to 5 Lakhs</option>
+                  <option value="More than 5 Lakhs">More than 5 Lakhs</option>
+                  <option value="Nil">Nil</option>
+                </select>
               </div>
 
               <div className="bg-blue-50 p-4 border border-blue-100 rounded-xl flex items-center justify-between">
