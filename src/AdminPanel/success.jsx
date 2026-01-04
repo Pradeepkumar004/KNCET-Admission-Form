@@ -1,16 +1,19 @@
 import React from "react";
 import Logo from "../assets/kongunadulogo.png";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Nav from "../Nav";
 
 const Sucess = () => {
     const location = useLocation();
     const { applicationId } = location.state || {}; // Destructure applicationId from state
-
+    const navigate = useNavigate();
+    const handleNav = () => {
+        navigate('/admindashboard');
+    }
     return (
         <>
             <div>
-              <Nav/>
+                <Nav />
             </div>
             <div className="grid justify-center gap-5 text-center py-9">
                 <div>
@@ -28,8 +31,8 @@ const Sucess = () => {
                 />
                 <div>
                     <div className="flex justify-center gap-5">
-                        <button type="submit" className="bg-blue-500 p-2 rounded text-white font-semibold">Download Receipt</button>
-                        <button type="button" className="bg-blue-500 p-2 rounded text-white font-semibold">Go to Home</button>
+                        {/* <button type="submit" className="bg-blue-500 p-2 rounded text-white font-semibold">Download Receipt</button> */}
+                        <button type="button" onClick={handleNav} className="bg-blue-500 p-2 rounded text-white font-semibold">Go to Dashboard</button>
                     </div>
                 </div>
 

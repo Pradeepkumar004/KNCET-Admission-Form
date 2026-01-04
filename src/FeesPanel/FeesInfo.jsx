@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 // import logo from "../assets/kongunadulogo.png"
 import Nav from "../Nav";
 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+
 const FeeStructure = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const applicationData = location.state?.applicationData || {};
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     // College Fees
     tuitionFee: 0,
@@ -19,7 +25,9 @@ const FeeStructure = () => {
     messBill: 0,
     roomRent: 0,
     laundryCharges: 0,
+    laundryCharges: 0,
     quota: "Management",
+    status: "Pending",
   });
 
   const [totals, setTotals] = useState({
@@ -51,39 +59,85 @@ const FeeStructure = () => {
   };
 
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const navigate = useNavigate();
 
   const departments = [
     "AD", "BME", "CSE", "CIVIL", "ECE", "EEE", "IT", "MECH"
   ];
 
-  const handleSubmit = () => {
-    // if (!selectedDepartment) {
-    //   alert("Please select a department");
-    //   return;
-    // }
+  const handleSubmit = async () => {
+    setIsSaving(true);
+    try {
+      // Prepare data to save (merge applicationData with formData)
+      const dataToSave = {
+        ...applicationData,
+        ...formData,
+        // Fee details
+        tuitionFee: formData.tuitionFee,
+        developmentFee: formData.developmentFee,
+        admissionFee: formData.admissionFee,
+        cautionDeposit: formData.cautionDeposit,
+        optionalFees: formData.optionalFees,
+        scStScholarship: formData.scStScholarship,
+        fgScholarship: formData.fgScholarship,
+        busFee: formData.busFee,
+        messBill: formData.messBill,
+        roomRent: formData.roomRent,
+        laundryCharges: formData.laundryCharges,
+        quota: formData.quota,
+        status: formData.status,
+        // Totals
+        feeSubTotal: totals.subTotal,
+        feeCollegeTotal: totals.collegeTotal,
+        feeHostelTotal: totals.hostelTotal,
+        feeOverallTotal: totals.overallTotal,
+      };
 
-    // Get current counter from local storage or start at 0
-    let currentCount = localStorage.getItem("appIdCounter");
-    if (!currentCount) {
-      currentCount = 0;
-    } else {
-      currentCount = parseInt(currentCount);
+      // Save to backend
+      const params = new URLSearchParams();
+      params.append("_method", "PUT");
+
+      for (const [key, value] of Object.entries(dataToSave)) {
+        params.append(key, value);
+      }
+
+      const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
+      const responseData = await response.json();
+
+      if (response.ok && !responseData.error) {
+        // Backend save successful
+        if (formData.status === 'Admitted') {
+          // Generate Application ID
+          let currentCount = localStorage.getItem("appIdCounter");
+          if (!currentCount) {
+            currentCount = 0;
+          } else {
+            currentCount = parseInt(currentCount);
+          }
+
+          currentCount += 1;
+          localStorage.setItem("appIdCounter", currentCount);
+
+          const paddedCount = String(currentCount).padStart(4, '0');
+          const applicationId = `26KNF${paddedCount}`;
+
+          navigate("/application-success", { state: { applicationId, status: formData.status } });
+        } else {
+          // For Pending or Cancel, navigate to dashboard
+          navigate("/admindashboard");
+        }
+      } else {
+        alert("Failed to save data: " + (responseData.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error saving data:", error);
+      alert("Error saving data: " + error.message);
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    // Increment before saving
-    currentCount += 1;
-
-    // Save updated counter
-    localStorage.setItem("appIdCounter", currentCount);
-
-    // Generate Application ID
-    // Generate Application ID with format 26KNF0001
-    const paddedCount = String(currentCount).padStart(4, '0');
-    const applicationId = `26KNF${paddedCount}`;
-
-    // Navigate to success page with ID
-    navigate("/application-success", { state: { applicationId } });
+  const handleStatusChange = (newStatus) => {
+    setFormData({ ...formData, status: newStatus });
   };
 
   return (
@@ -206,37 +260,66 @@ const FeeStructure = () => {
           </table>
 
           {/* Department Selection and Submit */}
-          <div className="p-6 bg-gray-50 border-t border-gray-200 flex justify-end items-center gap-4">
-            {/* <select
+          {/* <select
             className="p-2 border border-blue-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-          >
+            >
             <option value="">Select Department</option>
             {departments.map(dept => (
               <option key={dept} value={dept}>{dept}</option>
-            ))}
-          </select> */}
+              ))}
+              </select> */}
+          <div className="p-6 bg-gray-50 border-t border-gray-200">
+            <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Application Status</label>
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <button
+                onClick={() => handleStatusChange("Admitted")}
+                className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all border-2 ${formData.status === "Admitted"
+                  ? "bg-green-600 text-white border-green-600 shadow-md transform scale-105"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-600"
+                  }`}
+              >
+                Admitted
+              </button>
+              <button
+                onClick={() => handleStatusChange("Pending")}
+                className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all border-2 ${formData.status === "Pending"
+                  ? "bg-yellow-500 text-white border-yellow-500 shadow-md transform scale-105"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-yellow-400 hover:text-yellow-600"
+                  }`}
+              >
+                Pending
+              </button>
+              <button
+                onClick={() => handleStatusChange("cancel")}
+                className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all border-2 ${formData.status === "cancel"
+                  ? "bg-red-600 text-white border-red-600 shadow-md transform scale-105"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-red-400 hover:text-red-600"
+                  }`}
+              >
+                Cancel
+              </button>
+            </div>
 
-            <button
-              onClick={handleSubmit}
-              className="px-6 py-2 bg-green-700 text-white font-bold rounded shadow hover:bg-green-800 transition duration-300"
-            >
-              Admitted
-            </button>
-            <button
-              // onClick={handleSubmit}
-              className="px-6 py-2 bg-yellow-700 text-white font-bold rounded shadow hover:bg-yellow-800 transition duration-300"
-            >
-              Pending
-            </button>
-            <button
-              // onClick={handleSubmit}
-              className="px-6 py-2 bg-red-700 text-white font-bold rounded shadow hover:bg-red-800 transition duration-300"
-            >
-              Cancel
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className={`px-8 py-3 text-white font-bold rounded-lg shadow-lg transition duration-300 ${isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+              >
+                {isSaving ? "Saving..." : "Submit Application"}
+              </button>
+            </div>
           </div>
+
+
+
+
+
+
+
 
         </div>
       </div>

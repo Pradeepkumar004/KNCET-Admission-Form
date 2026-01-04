@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import logo from "../assets/kongunadulogo.png"
+// import logo from "../assets/kongunadulogo.png"
 import PDFPreviewModal from './PDFPreviewModal';
 import Nav from "../Nav";
 
@@ -30,12 +30,28 @@ const AcademicScores = () => {
 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
 
+    // const handleScoreChange = (index, value) => {
+    //     const newScores = [...scores];
+    //     newScores[index].obtained = value;
+    //     setScores(newScores);
+    // };
     const handleScoreChange = (index, value) => {
-        const newScores = [...scores];
-        newScores[index].obtained = value;
-        setScores(newScores);
-    };
+        // allow empty string for deletion
+        if (value === "") {
+            const newScores = [...scores];
+            newScores[index].obtained = value;
+            setScores(newScores);
+            return;
+        }
 
+        const numVal = parseFloat(value);
+        // check if it is a number and within range 0-100
+        if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
+            const newScores = [...scores];
+            newScores[index].obtained = value;
+            setScores(newScores);
+        }
+    };
     const handleNavigate = async () => {
         setIsSaving(true);
         try {
@@ -58,7 +74,7 @@ const AcademicScores = () => {
 
             const params = new URLSearchParams();
             params.append("_method", "PUT");
-            
+
             for (const [key, value] of Object.entries(updatedData)) {
                 params.append(key, value);
             }
@@ -118,7 +134,7 @@ const AcademicScores = () => {
     return (
         <>
             {/* top */}
-            <Nav/>
+            <Nav />
             {/* <div className="py-1 ml-10 flex flex-row font-bold ">
                 <img src={logo} className="w-10  " alt="Logo" />
                 <h1 className="py-5  px-3 text-2xl mt-3 ">
@@ -133,25 +149,25 @@ const AcademicScores = () => {
                         CBSC Scores
                     </h2>
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
-            <div className="grid">
-              <label className="font-semibold text-gray-600">Medium of Study</label>
-              <select value={mediumOfStudy} onChange={(e) => setMediumOfStudy(e.target.value)} className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                <option value="english">English</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="grid">
-              <label className="font-semibold text-gray-600">School Name & Location</label>
-              <input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder="Enter School Name & Location" className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div className="grid">
-              <label className="font-semibold text-gray-600">Year of Passing</label>
-              <input type="text" value={yearOfPassing} onChange={(e) => setYearOfPassing(e.target.value)} placeholder="Year of Passing" className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div className="grid">
-              <label className="font-semibold text-gray-600">Register Number</label>
-              <input type="text" value={registrationNo} onChange={(e) => setRegistrationNo(e.target.value)} placeholder="Enter Register Number" className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
+                        <div className="grid">
+                            <label className="font-semibold text-gray-600">Medium of Study</label>
+                            <select value={mediumOfStudy} onChange={(e) => setMediumOfStudy(e.target.value)} className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="english">English</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div className="grid">
+                            <label className="font-semibold text-gray-600">School Name & Location</label>
+                            <input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder="Enter School Name & Location" className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                        <div className="grid">
+                            <label className="font-semibold text-gray-600">Year of Passing</label>
+                            <input type="text" value={yearOfPassing} onChange={(e) => setYearOfPassing(e.target.value)} placeholder="Year of Passing" className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                        <div className="grid">
+                            <label className="font-semibold text-gray-600">Register Number</label>
+                            <input type="text" value={registrationNo} onChange={(e) => setRegistrationNo(e.target.value)} placeholder="Enter Register Number" className="px-3 py-2 mt-1 p-3 border-gray-200 text-lg text-gray-800 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
                         </div>
                     </div>
 
@@ -172,7 +188,9 @@ const AcademicScores = () => {
                                         <td className="p-3 border text-center">{s.max}</td>
                                         <td className="p-3 border">
                                             <input
-                                                type="number"
+                                            type=""
+                                                min="0"
+                                                max="100"
                                                 value={s.obtained}
                                                 onChange={(e) => handleScoreChange(idx, e.target.value)}
                                                 placeholder="Enter marks"
@@ -220,10 +238,24 @@ const AcademicScores = () => {
                                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Eligibility
+                            </label>
+                            <input
+                                type="text"
+                                value={cutoff >= 40 ? "Eligible" : "Not Eligible"}
+                                readOnly
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
+                            />
+                        </div>
+
+
                     </div>
 
                     {/* Upload Documents */}
-                    <h3 className="mt-8 text-lg font-semibold text-gray-700">
+                    {/* <h3 className="mt-8 text-lg font-semibold text-gray-700">
                         Upload Documents
                     </h3>
                     <div className="mt-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
@@ -252,7 +284,7 @@ const AcademicScores = () => {
                                 ))}
                             </ul>
                         )}
-                    </div>
+                    </div> */}
 
                     {/* Submit */}
                     <div className="mt-6 flex justify-end items-center gap-4">
@@ -278,6 +310,7 @@ const AcademicScores = () => {
                     </div>
                 </div>
             </div>
+
             {/* Success Modal */}
             {showSuccessModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
@@ -288,7 +321,7 @@ const AcademicScores = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            
+
                             <h3 className="text-2xl font-bold text-gray-900 mb-2">Data Successfully Stored!</h3>
                             <p className="text-gray-600 mb-6">
                                 Academic scores have been saved successfully.
@@ -298,11 +331,11 @@ const AcademicScores = () => {
                                 <button
                                     onClick={() => {
                                         setShowSuccessModal(false);
-                                        navigate('/admindashboard');
+                                        navigate('/feesInfo', { state: { applicationData } });
                                     }}
                                     className="px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
                                 >
-                                    Back to Dashboard
+                                    {/* Back to Dashboard */} FeesInfo
                                 </button>
                                 <button
                                     onClick={() => {
@@ -324,15 +357,16 @@ const AcademicScores = () => {
             )}
 
             {/* PDF Preview Modal */}
-            <PDFPreviewModal 
+            <PDFPreviewModal
                 isOpen={showPDFPreview}
                 onClose={() => {
                     setShowPDFPreview(false);
-                    navigate('/admindashboard');
+                    navigate('/feesInfo');
                 }}
                 studentData={applicationData}
                 studentName={applicationData.fullName}
-            />        </>
+            />
+        </>
     );
 };
 

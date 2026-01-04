@@ -202,7 +202,7 @@ const AcademicScores = () => {
                                         <td className="p-3 border text-center">{s.max}</td>
                                         <td className="p-3 border">
                                             <input
-                                                type="number"
+                                                type=""
                                                 min="0"
                                                 max="100"
                                                 value={s.obtained}

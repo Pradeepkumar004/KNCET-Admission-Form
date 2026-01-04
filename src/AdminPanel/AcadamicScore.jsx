@@ -29,11 +29,29 @@ const AcademicScores = () => {
 
   const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
 
+  // const handleScoreChange = (index, value) => {
+  //   const newScores = [...scores];
+  //   newScores[index].obtained = value;
+  //   setScores(newScores);
+  // };
   const handleScoreChange = (index, value) => {
-    const newScores = [...scores];
-    newScores[index].obtained = value;
-    setScores(newScores);
+    // allow empty string for deletion
+    if (value === "") {
+      const newScores = [...scores];
+      newScores[index].obtained = value;
+      setScores(newScores);
+      return;
+    }
+    const numVal = parseFloat(value);
+    // check if it is a number and within range 0-100
+    if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
+      const newScores = [...scores];
+      newScores[index].obtained = value;
+      setScores(newScores);
+    }
   };
+
+
 
   const handleNavigate = async () => {
     setIsSaving(true);
@@ -58,7 +76,7 @@ const AcademicScores = () => {
 
       const params = new URLSearchParams();
       params.append("_method", "PUT");
-      
+
       for (const [key, value] of Object.entries(updatedData)) {
         params.append(key, value);
       }
@@ -112,6 +130,8 @@ const AcademicScores = () => {
 
   const cutoff = calculateCutoff();
   // --- ADDED CUTOFF LOGIC END ---
+  {/* Eligibility */ }
+  const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
 
   const [termsAccepted, setTermsAccepted] = useState(false);
 
@@ -125,7 +145,7 @@ const AcademicScores = () => {
         </h1>
       </div> */}
       <div>
-        <Nav/>
+        <Nav />
       </div>
 
       <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
@@ -174,7 +194,9 @@ const AcademicScores = () => {
                     <td className="p-3 border text-center">{s.max}</td>
                     <td className="p-3 border">
                       <input
-                        type="number"
+                        type=""
+                        min="0"
+                        max="100"
                         value={s.obtained}
                         onChange={(e) => handleScoreChange(idx, e.target.value)}
                         placeholder="Enter marks"
@@ -222,6 +244,22 @@ const AcademicScores = () => {
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
               />
             </div>
+
+            {/* Eligiblity */}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Eligiblity
+              </label>
+              <input
+                type="text"
+                value={eligibility}
+                readOnly
+                className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
+              />
+            </div>
+
+
           </div>
 
           {/* Upload Documents */}
@@ -290,7 +328,7 @@ const AcademicScores = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              
+
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Data Successfully Stored!</h3>
               <p className="text-gray-600 mb-6">
                 Academic scores have been saved successfully.
@@ -300,11 +338,11 @@ const AcademicScores = () => {
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    navigate('/admindashboard');
+                    navigate('/feesInfo', { state: { applicationData } });
                   }}
                   className="px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  Back to Dashboard
+                  FeesInfo
                 </button>
                 <button
                   onClick={() => {
@@ -326,11 +364,11 @@ const AcademicScores = () => {
       )}
 
       {/* PDF Preview Modal */}
-      <PDFPreviewModal 
+      <PDFPreviewModal
         isOpen={showPDFPreview}
         onClose={() => {
           setShowPDFPreview(false);
-          navigate('/admindashboard');
+          navigate('/feesInfo');
         }}
         studentData={applicationData}
         studentName={applicationData.fullName}

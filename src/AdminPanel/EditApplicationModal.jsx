@@ -5,11 +5,11 @@ import Nav from "../Nav";
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
 
-export default function EditApplicationModal({ 
-  isOpen, 
-  onClose, 
-  applicationData, 
-  onUpdateSuccess 
+export default function EditApplicationModal({
+  isOpen,
+  onClose,
+  applicationData,
+  onUpdateSuccess
 }) {
   const navigate = useNavigate();
   const [editData, setEditData] = useState(applicationData || {});
@@ -39,7 +39,7 @@ export default function EditApplicationModal({
   const handleInputChange = (field, value) => {
     setEditData(prev => {
       const updated = { ...prev, [field]: value };
-      
+
       // Reset subsequent preferences when a preference is changed
       if (field === 'preference1') {
         // If preference1 changes, reset preference2 and preference3
@@ -49,7 +49,7 @@ export default function EditApplicationModal({
         // If preference2 changes, reset preference3
         updated.preference3 = '';
       }
-      
+
       // Handle gender-based accommodation logic
       if (field === 'gender') {
         // Reset accommodation when gender changes
@@ -57,7 +57,7 @@ export default function EditApplicationModal({
         updated.roomType = '';
         updated.travelType = '';
       }
-      
+
       // Handle accommodation changes
       if (field === 'accommodation') {
         if (value === 'DayScholar') {
@@ -66,7 +66,7 @@ export default function EditApplicationModal({
           updated.travelType = '';
         }
       }
-      
+
       return updated;
     });
   };
@@ -76,7 +76,7 @@ export default function EditApplicationModal({
     if (!dateString) return "";
     // If it's already in yyyy-MM-dd format, return it
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
-    
+
     // Parse the date
     let date;
     // Check if it's in dd-MM-yyyy format
@@ -87,7 +87,7 @@ export default function EditApplicationModal({
       // Otherwise, assume ISO timestamp or other format
       date = new Date(dateString);
     }
-    
+
     // Return in yyyy-MM-dd format for HTML date input
     if (isNaN(date.getTime())) return "";
     const year = date.getFullYear();
@@ -113,11 +113,11 @@ export default function EditApplicationModal({
       // Load the PDF template
       const templatePath = '/src/assets/admission-form-template.pdf';
       const existingPdfBytes = await fetch(templatePath).then(res => res.arrayBuffer());
-      
+
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
       const fields = form.getFields();
-      
+
       console.log(`📄 PDF Template loaded: ${fields.length} total fields`);
 
       // Helper function to set checkbox in a checkbox group (radio-style)
@@ -127,33 +127,33 @@ export default function EditApplicationModal({
           const field = form.getField(fieldName);
           const acroField = field.acroField;
           const kidsArray = acroField.Kids();
-          
+
           if (!kidsArray) {
             console.warn(`No widgets found for ${fieldName}`);
             return false;
           }
-          
+
           // pdf-lib returns a PDFArray, we need to access it properly
           const numKids = kidsArray.size();
-          
+
           for (let i = 0; i < numKids; i++) {
             try {
               const widget = kidsArray.lookup(i);
-              
+
               if (!widget) continue;
-              
+
               // Get appearance dictionary
               const ap = widget.lookup(PDFName.of('AP'));
-              
+
               if (ap) {
                 // Get normal appearance
                 const n = ap.lookup(PDFName.of('N'));
-                
+
                 if (n && n.entries) {
                   // Check if this widget has the export value we want
                   for (const [key, val] of n.entries()) {
                     const keyStr = key.decodeText ? key.decodeText() : key.toString().replace(/^\//, '');
-                    
+
                     // Match export value (like Python: if export_value == target_value)
                     if (keyStr === exportValue && keyStr !== 'Off') {
                       // Set this widget to checked (widget.field_value = True)
@@ -169,7 +169,7 @@ export default function EditApplicationModal({
               continue;
             }
           }
-          
+
           console.warn(`⚠ Export value '${exportValue}' not found in ${fieldName}`);
           return false;
         } catch (error) {
@@ -208,13 +208,13 @@ export default function EditApplicationModal({
 
       // Map data to PDF fields
       console.log('📝 Filling PDF form fields...\n');
-      
+
       // Basic Information
       setTextField('adminssion-id', editData.id || '');
       setTextField('date', formatDateForPDF(new Date()));
       setTextField('name', editData.fullName || '');
       setTextField('date-of-birth', formatDateForPDF(editData.dob));
-      
+
       // Gender - checkbox group
       if (editData.gender === 'Male') {
         setCheckboxInGroup('gender', 'male');
@@ -246,20 +246,20 @@ export default function EditApplicationModal({
         'MECH(Mechanical Engineering)': 'mech-dept',
         'AGRI(Agricultural Engineering)': 'agri-dept'
       };
-      
+
       console.log('📋 Branch Preferences:', {
         pref1: editData.preference1,
         pref2: editData.preference2,
         pref3: editData.preference3
       });
-      
+
       // Check the selected department checkboxes (like Python: widget.field_value = True)
       const preferences = [editData.preference1, editData.preference2, editData.preference3];
-      
+
       preferences.forEach((pref, index) => {
         if (pref && deptMapping[pref]) {
           const fieldName = deptMapping[pref];
-          
+
           try {
             const checkbox = form.getCheckBox(fieldName);
             checkbox.check();
@@ -269,9 +269,9 @@ export default function EditApplicationModal({
           }
         }
       });
-      
+
       // Branch awarded text field
-      setTextField('branch-awarded', editData.branchAwarded ||  '');
+      setTextField('branch-awarded', editData.branchAwarded || '');
 
       // Admission type - checkbox group
       if (editData.entry === 'I Year') {
@@ -328,11 +328,11 @@ export default function EditApplicationModal({
         'BoysHostel': 'boys-hostel',
         'GirlsHostel': 'girls-hostel'
       };
-      
+
       if (editData.accommodation && studentTypeMap[editData.accommodation]) {
         setCheckboxInGroup('student-type', studentTypeMap[editData.accommodation]);
       }
-      
+
       // Travel type (college-bus or out-bus)
       if (editData.travelType === 'CollegeBus') {
         setCheckboxInGroup('student-type', 'college-bus');
@@ -380,7 +380,7 @@ export default function EditApplicationModal({
       setTextField('reference-contact', editData.referenceContact || '');
 
       console.log('\n✅ PDF form filling completed');
-      
+
       // Save the PDF
       const pdfBytes = await pdfDoc.save();
       return pdfBytes;
@@ -400,7 +400,7 @@ export default function EditApplicationModal({
     try {
       const params = new URLSearchParams();
       params.append("_method", "PUT");
-      
+
       for (const [key, value] of Object.entries(editData)) {
         params.append(key, value);
       }
@@ -410,10 +410,10 @@ export default function EditApplicationModal({
 
       if (response.ok && !responseData.error) {
         onUpdateSuccess(editData);
-        
+
         // Navigate to score pages based on lastStudies
         const lastStudies = editData.lastStudies;
-        if (lastStudies === 'HSC' ) {
+        if (lastStudies === 'HSC') {
           navigate('/admin/academic-score', { state: { applicationData: editData } });
           onClose();
         } else if (lastStudies === 'CBSE') {
@@ -441,13 +441,13 @@ export default function EditApplicationModal({
 
   const handleNavigateToScores = () => {
     const lastStudies = editData.lastStudies;
-    
+
     if (lastStudies === 'HSC' || lastStudies === 'HSC Vocational') {
       navigate('/admin/academic-score', { state: { applicationData: editData } });
     } else if (lastStudies === 'CBSE') {
       navigate('/admin/cbse-score', { state: { applicationData: editData } });
     }
-    
+
     setShowSuccessModal(false);
     onClose();
   };
@@ -456,9 +456,9 @@ export default function EditApplicationModal({
 
   return (
     <>
-    <div>
-      <Nav/>
-    </div>
+      <div>
+        <Nav />
+      </div>
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full my-8">
           {/* Modal Header */}
@@ -584,10 +584,10 @@ export default function EditApplicationModal({
             <div>
               <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Degree / Department Preferences</label>
               <div className="space-y-3">
-                <select 
-                  name="preference1" 
-                  value={editData.preference1 || ""} 
-                  onChange={(e) => handleInputChange("preference1", e.target.value)} 
+                <select
+                  name="preference1"
+                  value={editData.preference1 || ""}
+                  onChange={(e) => handleInputChange("preference1", e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 >
                   <option value="" disabled>1st Preference</option>
@@ -595,10 +595,10 @@ export default function EditApplicationModal({
                     <option key={index} value={dept.department}>{dept.department}</option>
                   ))}
                 </select>
-                <select 
-                  name="preference2" 
-                  value={editData.preference2 || ""} 
-                  onChange={(e) => handleInputChange("preference2", e.target.value)} 
+                <select
+                  name="preference2"
+                  value={editData.preference2 || ""}
+                  onChange={(e) => handleInputChange("preference2", e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 >
                   <option value="" disabled>2nd Preference</option>
@@ -606,10 +606,10 @@ export default function EditApplicationModal({
                     <option key={index} value={dept.department} disabled={dept.department === editData.preference1}>{dept.department}</option>
                   ))}
                 </select>
-                <select 
-                  name="preference3" 
-                  value={editData.preference3 || ""} 
-                  onChange={(e) => handleInputChange("preference3", e.target.value)} 
+                <select
+                  name="preference3"
+                  value={editData.preference3 || ""}
+                  onChange={(e) => handleInputChange("preference3", e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 >
                   <option value="" disabled>3rd Preference</option>
@@ -652,24 +652,24 @@ export default function EditApplicationModal({
                 <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-3">
                   <div className="flex space-x-6">
                     <label className="flex items-center space-x-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="quota" 
-                        value="Government" 
-                        checked={editData.quota === "Government"} 
-                        onChange={(e) => handleInputChange("quota", e.target.value)} 
-                        className="w-5 h-5 text-blue-600 focus:ring-blue-500" 
+                      <input
+                        type="radio"
+                        name="quota"
+                        value="Government"
+                        checked={editData.quota === "Government"}
+                        onChange={(e) => handleInputChange("quota", e.target.value)}
+                        className="w-5 h-5 text-blue-600 focus:ring-blue-500"
                       />
                       <span className="font-medium">Government</span>
                     </label>
                     <label className="flex items-center space-x-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="quota" 
-                        value="Management" 
-                        checked={editData.quota === "Management"} 
-                        onChange={(e) => handleInputChange("quota", e.target.value)} 
-                        className="w-5 h-5 text-green-600 focus:ring-green-500" 
+                      <input
+                        type="radio"
+                        name="quota"
+                        value="Management"
+                        checked={editData.quota === "Management"}
+                        onChange={(e) => handleInputChange("quota", e.target.value)}
+                        className="w-5 h-5 text-green-600 focus:ring-green-500"
                       />
                       <span className="font-medium">Management</span>
                     </label>
@@ -1003,19 +1003,12 @@ export default function EditApplicationModal({
                   </label>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Application Status</label>
-                <select
-                  value={editData.status || ""}
-                  onChange={(e) => handleInputChange("status", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                >
-                  <option value="Registered">Registered</option>
-                  <option value="Admitted">Admitted</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Cancel">Cancel</option>
-                </select>
-              </div>
+
+
+
+
+
+
             </div>
           </div>
 
@@ -1025,8 +1018,11 @@ export default function EditApplicationModal({
               onClick={onClose}
               className="px-6 py-2.5 text-gray-700 font-medium hover:bg-gray-200 rounded-lg transition-colors"
             >
-              Cancel
+              Close
             </button>
+
+
+            {/* Save change */}
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -1039,6 +1035,10 @@ export default function EditApplicationModal({
         </div>
       </div>
 
+
+
+
+
       {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
@@ -1050,12 +1050,15 @@ export default function EditApplicationModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              
+
               {/* Success Message */}
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Data Updated Successfully!</h3>
               <p className="text-gray-600 mb-6">
                 The application has been updated and saved to the database.
               </p>
+
+
+
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 justify-center">
@@ -1095,7 +1098,7 @@ export default function EditApplicationModal({
       )}
 
       {/* PDF Preview Modal */}
-      <PDFPreviewModal 
+      <PDFPreviewModal
         isOpen={showPDFPreview}
         onClose={() => setShowPDFPreview(false)}
         studentData={editData}
