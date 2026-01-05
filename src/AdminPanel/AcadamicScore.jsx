@@ -130,10 +130,34 @@ const AcademicScores = () => {
 
   const cutoff = calculateCutoff();
   // --- ADDED CUTOFF LOGIC END ---
-  {/* Eligibility */ }
-  const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
+  // {/* Eligibility */ }
+  // const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
 
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(true);
+
+
+   // --- ELIGIBILITY LOGIC START ---
+    const calculateEligibility = () => {
+        const getMark = (subName) => {
+            const found = scores.find(s => s.subject === subName);
+            return parseFloat(found?.obtained) || 0;
+        };
+
+        const math = getMark("Mathematics");
+        const physics = getMark("Physics");
+        const chemistry = getMark("Chemistry");
+
+        // Eligibility Formula: (Maths + Physics + Chemistry) / 3
+        const eligibilityScore = (math + physics + chemistry) / 3;
+
+        if (math === 0 && physics === 0 && chemistry === 0) {
+            return "";
+        }
+
+        return eligibilityScore.toFixed(2);
+    };
+
+    const eligibility = calculateEligibility();
 
   return (
     <>
@@ -255,8 +279,7 @@ const AcademicScores = () => {
                 type="text"
                 value={eligibility}
                 readOnly
-                className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
-              />
+                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600" />
             </div>
 
 

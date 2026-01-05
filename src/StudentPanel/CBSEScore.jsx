@@ -98,13 +98,38 @@ const AcademicScores = () => {
 
         // Engineering Cutoff Formula: Math + (Physics/2) + (Chemistry/2)
         const cutoffValue = math + (physics / 2) + (chemistry / 2);
+       
         return cutoffValue > 0 ? cutoffValue.toFixed(2) : "0.00";
     };
 
     const cutoff = calculateCutoff();
     // --- ADDED CUTOFF LOGIC END ---
 
-    const [termsAccepted, setTermsAccepted] = useState(false);
+    // --- ELIGIBILITY LOGIC START ---
+    const calculateEligibility = () => {
+        const getMark = (subName) => {
+            const found = scores.find(s => s.subject === subName);
+            return parseFloat(found?.obtained) || 0;
+        };
+
+        const math = getMark("Mathematics");
+        const physics = getMark("Physics");
+        const chemistry = getMark("Chemistry");
+
+        // Eligibility Formula: (Maths + Physics + Chemistry) / 3
+        const eligibilityScore = (math + physics + chemistry) / 3;
+
+        if (math === 0 && physics === 0 && chemistry === 0) {
+            return "";
+        }
+
+        return eligibilityScore.toFixed(2);
+    };
+
+    const eligibility = calculateEligibility();
+    // --- ELIGIBILITY LOGIC END ---
+
+    const [termsAccepted, setTermsAccepted] = useState(true);
 
     return (
         <>
@@ -258,8 +283,9 @@ const AcademicScores = () => {
                             </label>
                             <input
                                 type="text"
-                                value={cutoff >= 40 ? "Eligible" : "Not Eligible"}
+                                value={eligibility}
                                 readOnly
+                                // className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility.includes('Eligible') && !eligibility.includes('Not') ? 'text-green-600' : 'text-red-600'}`}
                                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
                             />
                         </div>

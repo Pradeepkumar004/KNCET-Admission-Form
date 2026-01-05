@@ -99,6 +99,8 @@ const DiplomaScores = () => {
 
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  
+
   return (
     <>
 

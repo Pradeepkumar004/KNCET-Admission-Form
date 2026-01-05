@@ -8,10 +8,10 @@ const VocationalScores = () => {
     const [scores, setScores] = useState([
         { subject: "Tamil", max: 100, obtained: "" },
         { subject: "English", max: 100, obtained: "" },
-        { subject: "Mathematics", max: 100, obtained: "" },
-        { subject: "Physics", max: 100, obtained: "" },
-        { subject: "Chemistry", max: 100, obtained: "" },
-        { subject: "Computer Science / Biology", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
     ]);
 
     const [uploads, setUploads] = useState([]);
@@ -64,7 +64,7 @@ const VocationalScores = () => {
             scores: scores,
             totalMarks,
             percentage,
-            cutoff,
+            // cutoff,
             courseType: "Vocational"
         };
         localStorage.setItem('academicScoresData', JSON.stringify(vocationalData));
@@ -97,7 +97,7 @@ const VocationalScores = () => {
         const chemistry = getMark("Chemistry");
 
         // Engineering Cutoff Formula: Math + (Physics/2) + (Chemistry/2)
-        const cutoffValue = math + (physics / 2) + (chemistry / 2);
+        const cutoffValue = (math + physics + chemistry)/3;
         return cutoffValue > 0 ? cutoffValue.toFixed(2) : "0.00";
     };
 
@@ -105,9 +105,17 @@ const VocationalScores = () => {
     // --- ADDED CUTOFF LOGIC END ---
 
     {/* Eligibility */ }
-    const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
+    // const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
 
-    const [termsAccepted, setTermsAccepted] = useState(false);
+    // const [termsAccepted, setTermsAccepted] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(true);
+
+
+
+
+
+
+
 
     return (
         <>
@@ -202,7 +210,15 @@ const VocationalScores = () => {
                             <tbody>
                                 {scores.map((s, idx) => (
                                     <tr key={s.subject} className="text-sm">
-                                        <td className="p-3 border">{s.subject}</td>
+                                        <td className="p-3 border">
+                                            <input
+                                                type="text"
+                                                value={s.subject}
+                                                onChange={(e) => handleScoreChange(idx, e.target.value)}
+                                                placeholder="Enter Your Subject"
+                                                className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 " />
+                                        </td>
+                                        {/* <td className="p-3 border">{s.subject}</td> */}
                                         <td className="p-3 border text-center">{s.max}</td>
                                         <td className="p-3 border">
                                             <input
@@ -256,10 +272,27 @@ const VocationalScores = () => {
                                 CutOff
                             </label>
                             <input
-                                type="text"
-                                value={cutoff} // Corrected: Now displays calculated value
-                                readOnly
-                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
+                                type="number"
+                                min="0"
+                                max="100"
+                                // value={cutoff} // Corrected: Now displays calculated value
+                                // readOnly
+                                onChange={(e) => {
+                                    const value = e.target.value;
+
+                                    // allow empty input
+                                    if (value === "") {
+                                        handleScoreChange("");
+                                        return;
+                                    }
+
+                                    const num = Number(value);
+
+                                    if (num >= 0 && num <= 100) {
+                                        handleScoreChange(num);
+                                    }
+                                }}
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold "
                             />
                         </div>
                         {/* Eligiblity */}
@@ -269,10 +302,28 @@ const VocationalScores = () => {
                                 Eligiblity
                             </label>
                             <input
-                                type="text"
-                                value={eligibility}
-                                readOnly
-                                className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
+                                type="number"
+                                min="0"
+                                max="100"
+                                // value={eligibility}
+                                // readOnly
+                                // className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+
+                                    // allow empty input
+                                    if (value === "") {
+                                        handleScoreChange("");
+                                        return;
+                                    }
+
+                                    const num = Number(value);
+
+                                    if (num >= 0 && num <= 100) {
+                                        handleScoreChange(num);
+                                    }
+                                }}
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
                             />
                         </div>
                     </div>
