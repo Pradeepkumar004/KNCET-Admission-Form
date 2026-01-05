@@ -133,7 +133,7 @@ const AcademicScores = () => {
   // {/* Eligibility */ }
   // const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
 
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  
 
 
    // --- ELIGIBILITY LOGIC START ---
@@ -319,22 +319,13 @@ const AcademicScores = () => {
 
           {/* Submit */}
           <div className="mt-6 flex justify-end items-center gap-4">
-            <label className="flex items-center space-x-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span>I accept the Terms and Conditions</span>
-            </label>
+            
 
             <button
               type="submit"
-              className={`px-6 py-2 text-white rounded-md transition duration-200 ${termsAccepted && !isSaving ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
-                }`}
+              className="px-6 py-2 text-white rounded-md transition duration-200 bg-blue-600 hover:bg-blue-700  "
               onClick={handleNavigate}
-              disabled={!termsAccepted || isSaving}
+              
             >
               {isSaving ? "Saving..." : "Submit"}
             </button>

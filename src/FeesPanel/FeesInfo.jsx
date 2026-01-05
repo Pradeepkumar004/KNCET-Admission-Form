@@ -25,7 +25,6 @@ const FeeStructure = () => {
     messBill: 0,
     roomRent: 0,
     laundryCharges: 0,
-    laundryCharges: 0,
     quota: "Management",
     status: "Pending",
   });

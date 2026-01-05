@@ -13,7 +13,8 @@ import AdminDashboard from "./AdminPanel/AdminDashboard";
 import CBSEScore from './StudentPanel/CBSEScore';
 import AdminAcademicScores from './AdminPanel/AcadamicScore';
 import AdminCBSEScore from './AdminPanel/CBSEScore';
-
+import AdminVocationalScores from './AdminPanel/VocationalScore';
+import AdminDiplomaScores from './AdminPanel/DiplamoScore';
 
 
 
@@ -42,6 +43,8 @@ function App() {
         <Route path='/application-success' element={<AdminSuccess />} />
         <Route path='/admin/academic-score' element={<AdminAcademicScores />} />
         <Route path='/admin/cbse-score' element={<AdminCBSEScore />} />
+        <Route path='/admin/vocational-score' element={<AdminVocationalScores />} />
+        <Route path='/admin/diploma-score' element={<AdminDiplomaScores />} />
 
 
       </Routes>

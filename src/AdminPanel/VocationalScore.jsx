@@ -1,0 +1,350 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/kongunadulogo.png"
+
+const AdminVocationalScores = () => {
+    const navigate = useNavigate();
+
+    const [scores, setScores] = useState([
+        { subject: "Tamil", max: 100, obtained: "" },
+        { subject: "English", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+        { subject: "", max: 100, obtained: "" },
+    ]);
+
+    const [uploads, setUploads] = useState([]);
+    const [mediumOfStudy, setMediumOfStudy] = useState("");
+    const [otherMedium, setOtherMedium] = useState("");
+    const [schoolName, setSchoolName] = useState("");
+    const [registerNumber, setRegisterNumber] = useState("");
+    const [yearOfPassing, setYearOfPassing] = useState("");
+
+    const handleScoreChange = (index, value) => {
+        // allow empty string for deletion
+        if (value === "") {
+            const newScores = [...scores];
+            newScores[index].obtained = value;
+            setScores(newScores);
+            return;
+        }
+
+        const numVal = parseFloat(value);
+        // check if it is a number and within range 0-100
+        if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
+            const newScores = [...scores];
+            newScores[index].obtained = value;
+            setScores(newScores);
+        }
+    };
+
+    const handleNavigate = () => {
+        // Generate Enquiry ID
+        let currentEnqId = localStorage.getItem("enqIdCounter");
+        if (!currentEnqId) {
+            currentEnqId = 0;
+        } else {
+            currentEnqId = parseInt(currentEnqId);
+        }
+        currentEnqId += 1;
+        localStorage.setItem("enqIdCounter", currentEnqId);
+
+        // Format: KN26EQ0001
+        const paddedEnqCount = String(currentEnqId).padStart(4, '0');
+        const enquiryId = `KN26EQ${paddedEnqCount}`;
+
+        // Save academic scores data to localStorage
+        const vocationalData = {
+            enquiryId,
+            schoolName,
+            registerNumber,
+            medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
+            yearOfPassing,
+            scores: scores,
+            totalMarks,
+            percentage,
+            // cutoff,
+            courseType: "Vocational"
+        };
+        localStorage.setItem('academicScoresData', JSON.stringify(vocationalData));
+
+        navigate("/success", { state: { enquiryId } });
+    }
+
+    const handleUploadChange = (e) => {
+        const files = Array.from(e.target.files);
+        setUploads(files);
+    };
+
+    const totalMarks = scores.reduce(
+        (sum, s) => sum + (parseInt(s.obtained) || 0),
+        0
+    );
+
+    const percentage =
+        totalMarks > 0 ? ((totalMarks / (scores.length * 100)) * 100).toFixed(2) : "";
+
+    // --- ADDED CUTOFF LOGIC START ---
+    const calculateCutoff = () => {
+        const getMark = (subName) => {
+            const found = scores.find(s => s.subject === subName);
+            return parseFloat(found?.obtained) || 0;
+        };
+
+        const math = getMark("Mathematics");
+        const physics = getMark("Physics");
+        const chemistry = getMark("Chemistry");
+
+        // Engineering Cutoff Formula: Math + (Physics/2) + (Chemistry/2)
+        const cutoffValue = (math + physics + chemistry)/3;
+        return cutoffValue > 0 ? cutoffValue.toFixed(2) : "0.00";
+    };
+
+    const cutoff = calculateCutoff();
+    // --- ADDED CUTOFF LOGIC END ---
+
+    {/* Eligibility */ }
+    // const eligibility = parseFloat(cutoff) > 40 ? "Eligible" : "Not Eligible";
+
+    // const [termsAccepted, setTermsAccepted] = useState(false);
+   
+
+
+
+
+
+
+
+
+    return (
+        <>
+            {/* top */}
+            <div className="py-1 ml-10 flex flex-row font-bold ">
+                <img src={logo} className="w-10  " alt="Logo" />
+                <h1 className="py-5  px-3 text-2xl mt-3 ">
+                    Kongunadu college of Engineering and Technology
+                </h1>
+            </div>
+
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
+                <div className="max-w-4xl w-full bg-white shadow p-6 rounded-md">
+
+                    <h2 className=" text-4xl font-semibold text-gray-800">
+                        Vocational Scores
+                    </h2>
+
+                    <div className="grid grid-cols-2 gap-4 mt-5">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
+                            <input
+                                type="text"
+                                value={schoolName}
+                                onChange={(e) => setSchoolName(e.target.value)}
+                                placeholder="Enter School Name & Place"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number</label>
+                            <input
+                                type="text"
+                                value={registerNumber}
+                                onChange={(e) => setRegisterNumber(e.target.value)}
+                                placeholder="Enter Register Number"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-5">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study</label>
+                            <select
+                                value={mediumOfStudy}
+                                onChange={(e) => setMediumOfStudy(e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                required
+                            >
+                                <option value="">Select Medium</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="English">English</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            {mediumOfStudy === "Other" && (
+                                <input
+                                    type="text"
+                                    value={otherMedium}
+                                    onChange={(e) => setOtherMedium(e.target.value)}
+                                    placeholder="Please specify medium"
+                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mt-2"
+                                    required
+                                />
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing</label>
+                            <input
+                                type="text"
+                                value={yearOfPassing}
+                                onChange={(e) => setYearOfPassing(e.target.value)}
+                                placeholder="Year of Passing"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="mt-6 overflow-x-auto">
+                        <table className="w-full border border-gray-300 rounded-md">
+                            <thead className="bg-gray-100 text-left text-sm">
+                                <tr>
+                                    <th className="p-3 border">Subject</th>
+                                    <th className="p-3 border">Maximum Marks</th>
+                                    <th className="p-3 border">Marks Obtained</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {scores.map((s, idx) => (
+                                    <tr key={s.subject} className="text-sm">
+                                        <td className="p-3 border">
+                                            <input
+                                                type="text"
+                                                value={s.subject}
+                                                onChange={(e) => handleScoreChange(idx, e.target.value)}
+                                                placeholder="Enter Your Subject"
+                                                className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 " />
+                                        </td>
+                                        {/* <td className="p-3 border">{s.subject}</td> */}
+                                        <td className="p-3 border text-center">{s.max}</td>
+                                        <td className="p-3 border">
+                                            <input
+                                                type=""
+                                                min="0"
+                                                max="100"
+                                                value={s.obtained}
+                                                onChange={(e) => handleScoreChange(idx, e.target.value)}
+                                                placeholder="Enter marks"
+                                                className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 "
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Totals */}
+                    <div className="grid md:grid-cols-2 gap-4 mt-6">
+                        {/* Total Marks */}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Total Marks
+                            </label>
+                            <input
+                                type="text"
+                                value={totalMarks}
+                                readOnly
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+                            />
+                        </div>
+                        {/* Percentage */}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Percentage
+                            </label>
+                            <input
+                                type="text"
+                                value={percentage}
+                                readOnly
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+                            />
+                        </div>
+                        {/* Cutoff */}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                CutOff
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                // value={cutoff} // Corrected: Now displays calculated value
+                                // readOnly
+                                onChange={(e) => {
+                                    const value = e.target.value;
+
+                                    // allow empty input
+                                    if (value === "") {
+                                        handleScoreChange("");
+                                        return;
+                                    }
+
+                                    const num = Number(value);
+
+                                    if (num >= 0 && num <= 100) {
+                                        handleScoreChange(num);
+                                    }
+                                }}
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold "
+                            />
+                        </div>
+                        {/* Eligiblity */}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Eligiblity
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                // value={eligibility}
+                                // readOnly
+                                // className={`mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold ${eligibility === "Eligible" ? "text-green-600" : "text-red-600"}`}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+
+                                    // allow empty input
+                                    if (value === "") {
+                                        handleScoreChange("");
+                                        return;
+                                    }
+
+                                    const num = Number(value);
+
+                                    if (num >= 0 && num <= 100) {
+                                        handleScoreChange(num);
+                                    }
+                                }}
+                                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Submit */}
+                    <div className="mt-6 flex justify-end items-center gap-4">
+                      
+
+                        <button
+                            type="submit"
+                            className={`px-6 py-2 text-white rounded-md transition duration-200 `}
+                            onClick={handleNavigate}
+                            
+                        >
+                            Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+};
+
+export default AdminVocationalScores;

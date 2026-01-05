@@ -5,13 +5,7 @@ import logo from "../assets/kongunadulogo.png"
 const DiplomaScores = () => {
   const navigate = useNavigate();
 
-  const [diplomaScores, setDiplomaScores] = useState([
-    { subject: "Engineering Mathematics", max: 100, obtained: "" },
-    { subject: "Electrical Technology", max: 100, obtained: "" },
-    { subject: "Electronics", max: 100, obtained: "" },
-    { subject: "Mechanical Technology", max: 100, obtained: "" },
-    { subject: "Computer Applications", max: 100, obtained: "" },
-  ]);
+
 
   const [fifthSemMarks, setFifthSemMarks] = useState("");
   const [sixthSemMarks, setSixthSemMarks] = useState("");
@@ -36,23 +30,7 @@ const DiplomaScores = () => {
     completionDate: ''
   });
 
-  const handleScoreChange = (index, value) => {
-    // allow empty string for deletion
-    if (value === "") {
-      const newScores = [...diplomaScores];
-      newScores[index].obtained = value;
-      setDiplomaScores(newScores);
-      return;
-    }
 
-    const numVal = parseFloat(value);
-    // check if it is a number and within range 0-100
-    if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
-      const newScores = [...diplomaScores];
-      newScores[index].obtained = value;
-      setDiplomaScores(newScores);
-    }
-  };
 
   const handleNavigate = () => {
     // Generate Enquiry ID
@@ -72,10 +50,7 @@ const DiplomaScores = () => {
     // Save to local storage if needed, similar to other forms
     const diplomaData = {
       enquiryId,
-      diplomaScores,
       diplomaDetails,
-      totalMarks,
-      percentage,
       fifthSemMarks,
       sixthSemMarks
     };
@@ -89,17 +64,11 @@ const DiplomaScores = () => {
     setUploads(files);
   };
 
-  const totalMarks = diplomaScores.reduce(
-    (sum, s) => sum + (parseInt(s.obtained) || 0),
-    0
-  );
 
-  const percentage =
-    totalMarks > 0 ? ((totalMarks / (diplomaScores.length * 100)) * 100).toFixed(2) : "";
 
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  
+
 
   return (
     <>
@@ -124,9 +93,10 @@ const DiplomaScores = () => {
             Enter your diploma scores to complete your application.
           </p>
 
-          <div className="mt-6 grid-col-3  gap-4 font-semibold">
+          {/* details */}
+          <div className="mt-6 grid md:grid-cols-2 gap-4 font-semibold">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Diploma Program</label>
+              <label className="block text-sm font-medium text-gray-700">Department</label>
               <input
                 type="text"
                 value={diplomaDetails.program}
@@ -146,78 +116,36 @@ const DiplomaScores = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Completion Date</label>
+              <label className="block text-sm font-medium text-gray-700">Register/Roll No</label>
               <input
-                type="date"
+                type="text"
+                value={diplomaDetails.institution}
+                onChange={(e) => setDiplomaDetails({ ...diplomaDetails, institution: e.target.value })}
+                className="mt-1 w-90 border-gray-300 rounded-md p-3 border "
+                placeholder="Enter your Register/Roll No"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Completion year</label>
+              <input
+                type="number"
                 value={diplomaDetails.completionDate}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, completionDate: e.target.value })}
                 className="mt-1 w-90 border-gray-300 rounded-md p-3 border"
+                  placeholder="Enter your completion year"
               />
             </div>
           </div>
 
-          {/* Table */}
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full border border-gray-300 rounded-md">
-              <thead className="bg-gray-100 text-left text-sm">
-                <tr>
-                  <th className="p-3 border">Subject</th>
-                  <th className="p-3 border">Maximum Marks</th>
-                  <th className="p-3 border">Marks Obtained</th>
-                </tr>
-              </thead>
-              <tbody>
-                {diplomaScores.map((s, idx) => (
-                  <tr key={s.subject} className="text-sm">
-                    <td className="p-3 border">{s.subject}</td>
-                    <td className="p-3 border text-center">{s.max}</td>
-                    <td className="p-3 border">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={s.obtained}
-                        onChange={(e) => handleScoreChange(idx, e.target.value)}
-                        placeholder="Enter marks"
-                        className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 "
 
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
-          {/* Totals */}
+          {/* Semester Marks */}
           <div className="grid md:grid-cols-2 gap-4 mt-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Total Marks
-              </label>
-              <input
-                type="text"
-                value={totalMarks}
-                readOnly
-                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Percentage
-              </label>
-              <input
-                type="text"
-                value={percentage}
-                readOnly
-                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
-              />
-            </div>
             {/* upto 5th sem */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                5th semester
+                1st to 5th semester
               </label>
               <input
                 // type="number"
@@ -226,6 +154,7 @@ const DiplomaScores = () => {
                 value={fifthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setFifthSemMarks)}
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+                  placeholder="Enter your up to 5th semester marks"
               />
             </div>
 
@@ -234,7 +163,7 @@ const DiplomaScores = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                6th semester
+                1st to 6th semester
               </label>
               <input
                 // type="number"
@@ -243,6 +172,7 @@ const DiplomaScores = () => {
                 value={sixthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setSixthSemMarks)}
                 className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
+                placeholder="Enter your up to 6th semester marks"
               />
             </div>
 
@@ -262,39 +192,7 @@ const DiplomaScores = () => {
             </div> */}
           </div>
 
-          {/* Upload Documents */}
-          <h3 className="mt-8 text-lg font-semibold text-gray-700">
-            Upload Documents
-          </h3>
-          <div className="mt-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <p className="text-gray-500 text-sm mb-2">Drag and drop or browse</p>
-            <p className="text-xs text-gray-400 mb-4">
-              Upload your Diploma mark sheets and certificates here.
-            </p>
-            <input
-              type="file"
-              multiple
-              onChange={handleUploadChange}
-              className="hidden "
-              id="file-upload"
-
-            />
-            <label
-              htmlFor="file-upload"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer"
-            >
-              Browse Files
-            </label>
-
-            {/* Show uploaded file names */}
-            {uploads.length > 0 && (
-              <ul className="mt-2 text-sm text-gray-600">
-                {uploads.map((file, i) => (
-                  <li key={i}>{file.name}</li>
-                ))}
-              </ul>
-            )}
-          </div>
+          
 
           {/* Submit */}
           <div className="mt-6 flex justify-end items-center gap-4">
