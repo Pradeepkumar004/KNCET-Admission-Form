@@ -145,16 +145,16 @@ const DiplomaScores = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                1st to 5th semester
+                1st to 5th semester (%)
               </label>
               <input
-                // type="number"
+                type="number"
                 min="0"
                 max="100"
                 value={fifthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setFifthSemMarks)}
-                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
-                  placeholder="Enter your up to 5th semester marks"
+                className="mt-1 w-90 border-gray-300 rounded-md p-3 border"
+                placeholder="Enter your up 1st to 5th semester marks"
               />
             </div>
 
@@ -163,16 +163,16 @@ const DiplomaScores = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                1st to 6th semester
+                1st to 6th semester (%)
               </label>
               <input
-                // type="number"
+                type="number"
                 min="0"
                 max="100"
                 value={sixthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setSixthSemMarks)}
-                className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3"
-                placeholder="Enter your up to 6th semester marks"
+                className="mt-1 w-90 border-gray-300 rounded-md p-3 border"
+                placeholder="Enter your up 1st to 6th semester marks"
               />
             </div>
 

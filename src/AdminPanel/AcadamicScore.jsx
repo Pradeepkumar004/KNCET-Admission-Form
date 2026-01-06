@@ -87,7 +87,8 @@ const AcademicScores = () => {
       if (response.ok && !responseData.error) {
         // Update local applicationData
         Object.assign(applicationData, updatedData);
-        setShowSuccessModal(true);
+        // Navigate directly to FeesInfo
+        navigate('/feesInfo', { state: { applicationData: updatedData } });
       } else {
         alert("Failed to save scores: " + (responseData.error || "Unknown error"));
       }
@@ -327,7 +328,7 @@ const AcademicScores = () => {
               onClick={handleNavigate}
               
             >
-              {isSaving ? "Saving..." : "Submit"}
+              {isSaving ? "Saving..." : "Save and Continue"}
             </button>
           </div>
         </div>

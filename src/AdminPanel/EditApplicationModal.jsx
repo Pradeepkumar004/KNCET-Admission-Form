@@ -58,6 +58,13 @@ export default function EditApplicationModal({
         updated.travelType = '';
       }
 
+      // Clear dropout specifics when study type changes away from dropout
+      if (field === 'lastStudies' && value !== 'Dropout') {
+        updated.dropoutCollege = '';
+        updated.dropoutRegisterNo = '';
+        updated.dropoutYear = '';
+      }
+
       // Handle accommodation changes
       if (field === 'accommodation') {
         if (value === 'DayScholar') {
@@ -415,12 +422,16 @@ export default function EditApplicationModal({
         const lastStudies = editData.lastStudies;
         if (lastStudies === 'HSC') {
           navigate('/admin/academic-score', { state: { applicationData: editData } });
-          onClose();
+        } else if (lastStudies === 'HSC Vocational') {
+          navigate('/admin/vocational-score', { state: { applicationData: editData } });
         } else if (lastStudies === 'CBSE') {
           navigate('/admin/cbse-score', { state: { applicationData: editData } });
-          onClose();
+        } else if (lastStudies === 'Diploma') {
+          navigate('/admin/diploma-score', { state: { applicationData: editData } });
+        } else if (lastStudies === 'Dropout') {
+          navigate('/feesInfo', { state: { applicationData: editData } });
         } else {
-          // For other cases (Diploma, Dropout), just close and stay on dashboard
+          // For other cases, just close and stay on dashboard
           onClose();
         }
       } else {
@@ -442,10 +453,16 @@ export default function EditApplicationModal({
   const handleNavigateToScores = () => {
     const lastStudies = editData.lastStudies;
 
-    if (lastStudies === 'HSC' || lastStudies === 'HSC Vocational') {
+    if (lastStudies === 'HSC') {
       navigate('/admin/academic-score', { state: { applicationData: editData } });
+    } else if (lastStudies === 'HSC Vocational') {
+      navigate('/admin/vocational-score', { state: { applicationData: editData } });
     } else if (lastStudies === 'CBSE') {
       navigate('/admin/cbse-score', { state: { applicationData: editData } });
+    } else if (lastStudies === 'Diploma') {
+      navigate('/admin/diploma-score', { state: { applicationData: editData } });
+    } else if (lastStudies === 'Dropout') {
+      navigate('/feesInfo', { state: { applicationData: editData } });
     }
 
     setShowSuccessModal(false);
@@ -504,81 +521,147 @@ export default function EditApplicationModal({
             <hr className="border-gray-100" />
 
             {/* Row 2: DOB & Gender/Accommodation */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Date of Birth</label>
-                <input
-                  type="date"
-                  value={formatDateForInput(editData.dob)}
-                  onChange={(e) => handleInputChange("dob", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Gender / Accommodation</label>
-                <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-4">
-                  <div className="flex space-x-6">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input type="radio" name="gender" value="Male" checked={editData.gender === "Male"} onChange={(e) => handleInputChange("gender", e.target.value)} className="w-5 h-5 text-blue-600 focus:ring-blue-500" />
-                      <span className="font-medium">Male</span>
-                    </label>
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input type="radio" name="gender" value="Female" checked={editData.gender === "Female"} onChange={(e) => handleInputChange("gender", e.target.value)} className="w-5 h-5 text-pink-600 focus:ring-pink-500" />
-                      <span className="font-medium">Female</span>
-                    </label>
-                  </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+  
+  {/* LEFT COLUMN WRAPPER: Holds DOB and Enquiry ID vertically */}
+  <div className="space-y-8">
+    
+    {/* 1. Date of Birth Field */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        Date of Birth
+      </label>
+      <input
+        type="date"
+        value={formatDateForInput(editData.dob)}
+        onChange={(e) => handleInputChange("dob", e.target.value)}
+        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+      />
+    </div>
 
-                  {editData.gender && (
-                    <div className="pt-4 border-t border-gray-200 space-y-3">
-                      <label className="block text-xs font-bold text-gray-400 uppercase">Residence Preference</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="flex items-center space-x-2 p-2 rounded-lg border border-gray-200 hover:border-blue-400 cursor-pointer">
-                          <input type="radio" name="accommodation" value={editData.gender === "Male" ? "BoysHostel" : "GirlsHostel"} checked={editData.accommodation === (editData.gender === "Male" ? "BoysHostel" : "GirlsHostel")} onChange={(e) => handleInputChange("accommodation", e.target.value)} />
-                          <span className="text-sm">Hostel</span>
-                        </label>
-                        <label className="flex items-center space-x-2 p-2 rounded-lg border border-gray-200 hover:border-blue-400 cursor-pointer">
-                          <input type="radio" name="accommodation" value="DayScholar" checked={editData.accommodation === "DayScholar"} onChange={(e) => handleInputChange("accommodation", e.target.value)} />
-                          <span className="text-sm">Day Scholar</span>
-                        </label>
-                      </div>
+    {/* 2. Enquiry ID Field (New ReadOnly Input) */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        Enquiry ID
+      </label>
+      <input
+        type="text"
+        value={editData.enquiryId || "ENQ-PENDING"} /* Replace with your actual data variable */
+        readOnly
+        className="w-full px-4 py-3 bg-gray-200 text-gray-500 border border-gray-300 rounded-lg cursor-not-allowed outline-none select-none"
+      />
+    </div>
 
-                      {/* Room / Travel Details Sub-options */}
-                      {(editData.accommodation === "BoysHostel" || editData.accommodation === "GirlsHostel") && (
-                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
-                          <select name="roomType" value={editData.roomType || ""} onChange={(e) => handleInputChange("roomType", e.target.value)} className="w-full text-sm bg-transparent border-none outline-none focus:ring-0">
-                            <option value="">Select Room Type</option>
-                            <option value="Normal4">Normal (4 Members)</option>
-                            <option value="Attach3">Attached Bath (3 Members)</option>
-                            <option value="AC2">AC + Attached (2 Members)</option>
-                          </select>
-                        </div>
-                      )}
+  </div>
 
-                      {editData.accommodation === "DayScholar" && (
-                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
-                          <select name="travelType" value={editData.travelType || ""} onChange={(e) => handleInputChange("travelType", e.target.value)} className="w-full text-sm bg-transparent border-none outline-none focus:ring-0">
-                            <option value="">Select Travel Type</option>
-                            <option value="CollegeBus">College Bus</option>
-                            <option value="OutBus">Own/Outside Travel</option>
-                          </select>
-                          {editData.travelType === "CollegeBus" && (
-                            <input
-                              type="text"
-                              value={editData.busStop || ""}
-                              onChange={(e) => handleInputChange("busStop", e.target.value)}
-                              className="w-full text-sm px-3 py-2 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                              placeholder="Enter bus stop name"
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+  {/* RIGHT COLUMN: Gender / Accommodation (Unchanged) */}
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+      Gender / Accommodation
+    </label>
+    <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-4">
+      <div className="flex space-x-6">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="radio"
+            name="gender"
+            value="Male"
+            checked={editData.gender === "Male"}
+            onChange={(e) => handleInputChange("gender", e.target.value)}
+            className="w-5 h-5 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="font-medium">Male</span>
+        </label>
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="radio"
+            name="gender"
+            value="Female"
+            checked={editData.gender === "Female"}
+            onChange={(e) => handleInputChange("gender", e.target.value)}
+            className="w-5 h-5 text-pink-600 focus:ring-pink-500"
+          />
+          <span className="font-medium">Female</span>
+        </label>
+      </div>
+
+      {editData.gender && (
+        <div className="pt-4 border-t border-gray-200 space-y-3">
+          <label className="block text-xs font-bold text-gray-400 uppercase">
+            Residence Preference
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex items-center space-x-2 p-2 rounded-lg border border-gray-200 hover:border-blue-400 cursor-pointer">
+              <input
+                type="radio"
+                name="accommodation"
+                value={editData.gender === "Male" ? "BoysHostel" : "GirlsHostel"}
+                checked={
+                  editData.accommodation ===
+                  (editData.gender === "Male" ? "BoysHostel" : "GirlsHostel")
+                }
+                onChange={(e) => handleInputChange("accommodation", e.target.value)}
+              />
+              <span className="text-sm">Hostel</span>
+            </label>
+            <label className="flex items-center space-x-2 p-2 rounded-lg border border-gray-200 hover:border-blue-400 cursor-pointer">
+              <input
+                type="radio"
+                name="accommodation"
+                value="DayScholar"
+                checked={editData.accommodation === "DayScholar"}
+                onChange={(e) => handleInputChange("accommodation", e.target.value)}
+              />
+              <span className="text-sm">Day Scholar</span>
+            </label>
+          </div>
+
+          {/* Room / Travel Details Sub-options */}
+          {(editData.accommodation === "BoysHostel" ||
+            editData.accommodation === "GirlsHostel") && (
+            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
+              <select
+                name="roomType"
+                value={editData.roomType || ""}
+                onChange={(e) => handleInputChange("roomType", e.target.value)}
+                className="w-full text-sm bg-transparent border-none outline-none focus:ring-0"
+              >
+                <option value="">Select Room Type</option>
+                <option value="Normal4">Normal (4 Members)</option>
+                <option value="Attach3">Attached Bath (3 Members)</option>
+                <option value="AC2">AC + Attached (2 Members)</option>
+              </select>
             </div>
+          )}
 
-            <hr className="border-gray-100" />
+          {editData.accommodation === "DayScholar" && (
+            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
+              <select
+                name="travelType"
+                value={editData.travelType || ""}
+                onChange={(e) => handleInputChange("travelType", e.target.value)}
+                className="w-full text-sm bg-transparent border-none outline-none focus:ring-0"
+              >
+                <option value="">Select Travel Type</option>
+                <option value="CollegeBus">College Bus</option>
+                <option value="OutBus">Own/Outside Travel</option>
+              </select>
+              {editData.travelType === "CollegeBus" && (
+                <input
+                  type="text"
+                  value={editData.busStop || ""}
+                  onChange={(e) => handleInputChange("busStop", e.target.value)}
+                  className="w-full text-sm px-3 py-2 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Enter bus stop name"
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
 
             {/* Row 3: Department Preferences */}
             <div>
@@ -752,14 +835,22 @@ export default function EditApplicationModal({
             {/* Annual Income */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Annual Family Income</label>
-              <input
-                type="number"
+              <select
                 value={editData.annualIncome || ""}
                 onChange={(e) => handleInputChange("annualIncome", e.target.value)}
-                placeholder="₹"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-              />
+              >
+                <option value="" disabled>Select Income Range</option>
+                <option value="Less than 1 Lakh">Less than 1 Lakh</option>
+                <option value="1 Lakh to 1.5 Lakhs">1 Lakh to 1.5 Lakhs</option>
+                <option value="1.5 Lakhs to 2.5 Lakhs">1.5 Lakhs to 2.5 Lakhs</option>
+                <option value="2.5 Lakhs to 5 Lakhs">2.5 Lakhs to 5 Lakhs</option>
+                <option value="More than 5 Lakhs">More than 5 Lakhs</option>
+                <option value="Nil">Nil</option>
+              </select>
+              
             </div>
+            
 
             <hr className="border-gray-100" />
 
@@ -935,6 +1026,44 @@ export default function EditApplicationModal({
                       <option value="Dropout">Dropout</option>
                     </select>
                   </div>
+
+                  {editData.lastStudies === 'Dropout' && (
+                    <div className="p-5 bg-orange-50 rounded-xl border border-orange-100 space-y-4 animate-in fade-in slide-in-from-top-2">
+                      <h4 className="text-xs font-bold text-orange-800 uppercase">College Dropout Details</h4>
+                      <div>
+                        <label className="block text-[10px] text-orange-600 font-bold uppercase mb-1">Previous College & Place</label>
+                        <input
+                          type="text"
+                          value={editData.dropoutCollege || ''}
+                          onChange={(e) => handleInputChange('dropoutCollege', e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500"
+                          placeholder="Enter college name and location"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] text-orange-600 font-bold uppercase mb-1">Register Number</label>
+                          <input
+                            type="text"
+                            value={editData.dropoutRegisterNo || ''}
+                            onChange={(e) => handleInputChange('dropoutRegisterNo', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500"
+                            placeholder="Enter register number"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-orange-600 font-bold uppercase mb-1">Year of Study</label>
+                          <input
+                            type="text"
+                            value={editData.dropoutYear || ''}
+                            onChange={(e) => handleInputChange('dropoutYear', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500"
+                            placeholder=""
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1028,8 +1157,7 @@ export default function EditApplicationModal({
               disabled={isSaving}
               className="px-10 py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:translate-y-[-2px] transition-all active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? "Saving..." : "Save Changes"}
-              {!isSaving && <span className="ml-2">→</span>}
+              {isSaving ? "Saving..." : "Save and Continue"}
             </button>
           </div>
         </div>

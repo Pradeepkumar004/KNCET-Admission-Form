@@ -85,7 +85,8 @@ const AcademicScores = () => {
             if (response.ok && !responseData.error) {
                 // Update local applicationData
                 Object.assign(applicationData, updatedData);
-                setShowSuccessModal(true);
+                // Navigate directly to FeesInfo
+                navigate('/feesInfo', { state: { applicationData: updatedData } });
             } else {
                 alert("Failed to save scores: " + (responseData.error || "Unknown error"));
             }
@@ -318,11 +319,11 @@ const AcademicScores = () => {
 
                         <button
                             type="submit"
-                            className={`px-6 py-2 text-white rounded-md transition duration-200 `}
+                            className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={handleNavigate}
-                            
+                            disabled={isSaving}
                         >
-                            {isSaving ? "Saving..." : "Submit"}
+                            {isSaving ? "Saving..." : "Save and Continue"}
                         </button>
                     </div>
                 </div>

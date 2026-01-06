@@ -42,7 +42,8 @@ export default function Dashboard() {
   const filteredApps = Array.isArray(applications) ? applications.filter((app) => {
     const matchesSearch =
       (app.fullName && app.fullName.toLowerCase().includes(search.toLowerCase())) ||
-      (app.email && app.email.toLowerCase().includes(search.toLowerCase()));
+      (app.email && app.email.toLowerCase().includes(search.toLowerCase())) ||
+      (app.id && app.id.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = filterStatus === "All" || app.status === filterStatus;
     return matchesSearch && matchesStatus;
   }) : [];
@@ -224,7 +225,7 @@ export default function Dashboard() {
               <div className="relative flex-1 max-w-md">
                 <input
                   type="text"
-                  placeholder="Search student or Email ID..."
+                  placeholder="Search student, Email ID or Enquiry ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full rounded-xl border-gray-200 pl-11 pr-4 py-2.5 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm placeholder:text-gray-400"
@@ -249,8 +250,8 @@ export default function Dashboard() {
                 <thead className="bg-gray-50/50">
                   <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
                     <th className="px-6 py-4">Student Details</th>
-                    <th className="px-6 py-4">{["Registered", "cancel", "Pending"].includes(filterStatus) ? "Enquiry ID" : "Email ID"}</th>
-                    <th className="px-6 py-4">Department</th>
+                    <th className="px-6 py-4">Enquiry ID</th>
+                    <th className="px-6 py-4">1st Preference</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">Submitted</th>
                     <th className="px-6 py-4 text-center">Actions</th>
@@ -276,7 +277,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="text-sm font-medium text-gray-700">{app.department}</div>
+                        <div className="text-sm font-medium text-gray-700">{app.firstPreference || app.preference1 || app.department || "N/A"}</div>
                       </td>
                       <td className="px-6 py-5">
                         <span className={`flex items-center text-xs font-bold ${app.status === "Admitted" ? "text-green-600 bg-green-50 border-green-100" :

@@ -1,9 +1,13 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/kongunadulogo.png"
+
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
 
 const AdminVocationalScores = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const applicationData = location.state?.applicationData || {};
 
     const [scores, setScores] = useState([
         { subject: "Tamil", max: 100, obtained: "" },
@@ -20,6 +24,8 @@ const AdminVocationalScores = () => {
     const [schoolName, setSchoolName] = useState("");
     const [registerNumber, setRegisterNumber] = useState("");
     const [yearOfPassing, setYearOfPassing] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const handleScoreChange = (index, value) => {
         // allow empty string for deletion
@@ -39,37 +45,51 @@ const AdminVocationalScores = () => {
         }
     };
 
-    const handleNavigate = () => {
-        // Generate Enquiry ID
-        let currentEnqId = localStorage.getItem("enqIdCounter");
-        if (!currentEnqId) {
-            currentEnqId = 0;
-        } else {
-            currentEnqId = parseInt(currentEnqId);
+    const handleNavigate = async () => {
+        setIsSaving(true);
+        try {
+            // Prepare updated data with vocational scores
+            const updatedData = {
+                ...applicationData,
+                mediumOfStudy: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
+                schoolName,
+                registerNumber,
+                yearOfPassing,
+                vocationalTamilMarks: scores[0].obtained,
+                vocationalEnglishMarks: scores[1].obtained,
+                vocationalSubject3Marks: scores[2].obtained,
+                vocationalSubject4Marks: scores[3].obtained,
+                vocationalSubject5Marks: scores[4].obtained,
+                vocationalSubject6Marks: scores[5].obtained,
+                vocationalTotalMarks: totalMarks,
+                vocationalPercentage: percentage,
+                vocationalCutoff: cutoff
+            };
+
+            const params = new URLSearchParams();
+            params.append("_method", "PUT");
+
+            for (const [key, value] of Object.entries(updatedData)) {
+                params.append(key, value);
+            }
+
+            const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
+            const responseData = await response.json();
+
+            if (response.ok && !responseData.error) {
+                // Update local applicationData
+                Object.assign(applicationData, updatedData);
+                // Navigate directly to FeesInfo
+                navigate('/feesInfo', { state: { applicationData: updatedData } });
+            } else {
+                alert("Failed to save vocational scores: " + (responseData.error || "Unknown error"));
+            }
+        } catch (error) {
+            console.error("Error saving vocational scores:", error);
+            alert("Error saving vocational scores: " + error.message);
+        } finally {
+            setIsSaving(false);
         }
-        currentEnqId += 1;
-        localStorage.setItem("enqIdCounter", currentEnqId);
-
-        // Format: KN26EQ0001
-        const paddedEnqCount = String(currentEnqId).padStart(4, '0');
-        const enquiryId = `KN26EQ${paddedEnqCount}`;
-
-        // Save academic scores data to localStorage
-        const vocationalData = {
-            enquiryId,
-            schoolName,
-            registerNumber,
-            medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
-            yearOfPassing,
-            scores: scores,
-            totalMarks,
-            percentage,
-            // cutoff,
-            courseType: "Vocational"
-        };
-        localStorage.setItem('academicScoresData', JSON.stringify(vocationalData));
-
-        navigate("/success", { state: { enquiryId } });
     }
 
     const handleUploadChange = (e) => {
@@ -334,15 +354,49 @@ const AdminVocationalScores = () => {
 
                         <button
                             type="submit"
-                            className={`px-6 py-2 text-white rounded-md transition duration-200 `}
+                            disabled={isSaving}
+                            className={`px-6 py-2 text-white rounded-md transition duration-200 ${
+                                isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                            }`}
                             onClick={handleNavigate}
-                            
                         >
-                            Submit
+                           {isSaving ? "Saving..." : "Save and Continue"}
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+                        <div className="p-8 text-center">
+                            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                                <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Data Successfully Stored!</h3>
+                            <p className="text-gray-600 mb-6">
+                                Vocational scores have been saved successfully.
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                <button
+                                    onClick={() => {
+                                        setShowSuccessModal(false);
+                                        navigate('/feesInfo', { state: { applicationData } });
+                                    }}
+                                    className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    Continue to Fees Info
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

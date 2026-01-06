@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PDFDocument, PDFName } from 'pdf-lib';
+import { PDFDocument, PDFName, StandardFonts } from 'pdf-lib';
 
 export default function PDFPreviewModal({ 
   isOpen, 
@@ -50,13 +50,59 @@ export default function PDFPreviewModal({
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
       const fields = form.getFields();
+      const defaultFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      // Resolve actual PDF field names (many are nested like "undefined.name")
+      const resolveFieldName = (fieldName) => {
+        const exact = fields.find((field) => field.getName() === fieldName);
+        if (exact) return exact.getName();
+
+        const suffixMatches = fields.filter((field) => field.getName().endsWith(`.${fieldName}`));
+        if (suffixMatches.length === 1) {
+          return suffixMatches[0].getName();
+        }
+
+        if (suffixMatches.length > 1) {
+          console.warn(
+            `Field '${fieldName}' matched multiple PDF fields: ${suffixMatches
+              .map((field) => field.getName())
+              .join(', ')}`
+          );
+        } else {
+          console.warn(`Field '${fieldName}' not found in the PDF template`);
+        }
+        return null;
+      };
       
       console.log(`📄 PDF Template loaded: ${fields.length} total fields`);
+
+      const pickValue = (...keys) => {
+        for (const key of keys) {
+          const value = studentData?.[key];
+          if (value !== undefined && value !== null && value !== '') {
+            return value;
+          }
+        }
+        return '';
+      };
+
+      const studiesHints = [studentData?.lastStudies, studentData?.typeStudies, studentData?.studyType]
+        .map((value) => (typeof value === 'string' ? value.toLowerCase() : ''));
+      const isVocational = studiesHints.some((hint) => hint.includes('vocational'));
+      const isDiploma = studiesHints.some((hint) => hint.includes('diploma'));
+
+      const chooseDiplomaValue = (diplomaKey, ...otherKeys) => {
+        return isDiploma
+          ? pickValue(diplomaKey, ...otherKeys)
+          : pickValue(...otherKeys, diplomaKey);
+      };
 
       // Helper function to set checkbox in a checkbox group (radio-style)
       const setCheckboxInGroup = (fieldName, exportValue) => {
         try {
-          const field = form.getField(fieldName);
+          const actualName = resolveFieldName(fieldName);
+          if (!actualName) return false;
+          const field = form.getField(actualName);
           const acroField = field.acroField;
           const kidsArray = acroField.Kids();
           
@@ -66,6 +112,7 @@ export default function PDFPreviewModal({
           }
           
           const numKids = kidsArray.size();
+          let foundMatch = false;
           
           for (let i = 0; i < numKids; i++) {
             try {
@@ -83,9 +130,15 @@ export default function PDFPreviewModal({
                     const keyStr = key.decodeText ? key.decodeText() : key.toString().replace(/^\//, '');
                     
                     if (keyStr === exportValue && keyStr !== 'Off') {
+                      // Set the appearance state to the export value
                       widget.set(PDFName.of('AS'), PDFName.of(exportValue));
+                      // Also set the field value
+                      widget.set(PDFName.of('V'), PDFName.of(exportValue));
                       console.log(`✓ ${fieldName} = ${exportValue}`);
-                      return true;
+                      foundMatch = true;
+                    } else if (keyStr !== exportValue && keyStr !== 'Off') {
+                      // Uncheck other options in the group
+                      widget.set(PDFName.of('AS'), PDFName.of('Off'));
                     }
                   }
                 }
@@ -95,8 +148,10 @@ export default function PDFPreviewModal({
             }
           }
           
-          console.warn(`⚠ Export value '${exportValue}' not found in ${fieldName}`);
-          return false;
+          if (!foundMatch) {
+            console.warn(`⚠ Export value '${exportValue}' not found in ${fieldName}`);
+          }
+          return foundMatch;
         } catch (error) {
           console.warn(`✗ Could not set ${fieldName}:`, error.message);
           return false;
@@ -106,12 +161,35 @@ export default function PDFPreviewModal({
       // Helper function to safely set text field value
       const setTextField = (fieldName, value) => {
         try {
-          const field = form.getTextField(fieldName);
-          if (field && value !== undefined && value !== null) {
-            field.setText(String(value));
+          const actualName = resolveFieldName(fieldName);
+          if (!actualName) return;
+          const field = form.getTextField(actualName);
+          if (field && value !== undefined && value !== null && value !== '') {
+            const stringValue = String(value);
+            field.setText(stringValue);
+            console.log(`✓ Text: '${fieldName}' = '${stringValue}'`);
           }
         } catch (error) {
-          console.warn(`Could not set text field ${fieldName}:`, error.message);
+          console.warn(`✗ Could not set text field '${fieldName}':`, error.message);
+        }
+      };
+
+      // Helper function to set checkbox
+      const setCheckbox = (fieldName, checked) => {
+        try {
+          const actualName = resolveFieldName(fieldName);
+          if (!actualName) return;
+          const field = form.getCheckBox(actualName);
+          if (field) {
+            if (checked) {
+              field.check();
+              console.log(`✓ Checkbox: '${fieldName}' checked`);
+            } else {
+              field.uncheck();
+            }
+          }
+        } catch (error) {
+          console.warn(`✗ Could not set checkbox '${fieldName}':`, error.message);
         }
       };
 
@@ -119,7 +197,7 @@ export default function PDFPreviewModal({
       console.log('📝 Filling PDF form fields...\n');
       
       // Basic Information
-      setTextField('adminssion-id', studentData.id || '');
+      setTextField('admission-id', studentData.id || '');
       setTextField('date', formatDateForPDF(new Date()));
       setTextField('name', studentData.fullName || '');
       setTextField('date-of-birth', formatDateForPDF(studentData.dob));
@@ -141,7 +219,7 @@ export default function PDFPreviewModal({
         'EEE': 'eee-dept',
         'IT': 'it-dept',
         'Mechanical': 'mech-dept',
-        'Agriculture': 'agri-dept',
+        'Agriculture': 'age-dept',
         'AD(Artificial and Data Science Engineering)': 'ad-dept',
         'BME(Bio Medical Engineering)': 'bme-dept',
         'BME(Bio-Medical Engineering)': 'bme-dept',
@@ -159,14 +237,7 @@ export default function PDFPreviewModal({
       preferences.forEach((pref) => {
         if (pref && deptMapping[pref]) {
           const fieldName = deptMapping[pref];
-          
-          try {
-            const checkbox = form.getCheckBox(fieldName);
-            checkbox.check();
-            console.log(`✓ ${fieldName}`);
-          } catch (error) {
-            console.warn(`✗ Could not check ${fieldName}:`, error.message);
-          }
+          setCheckbox(fieldName, true);
         }
       });
       
@@ -189,7 +260,7 @@ export default function PDFPreviewModal({
       // Community
       const communityMap = {
         'OC': 'oc',
-        'BC': 'bc',
+        'BC': 'BC',
         'BCM': 'bcm',
         'MBC': 'mbc',
         'SC': 'sc',
@@ -203,7 +274,7 @@ export default function PDFPreviewModal({
 
       // Seat Type
       if (studentData.quota === 'Government') {
-        setCheckboxInGroup('seat-type', 'government');
+        setCheckboxInGroup('seat-type', 'governement');
       } else if (studentData.quota === 'Management') {
         setCheckboxInGroup('seat-type', 'management');
       }
@@ -234,13 +305,7 @@ export default function PDFPreviewModal({
       
       // Day Scholar checkbox
       if (studentData.accommodation === 'DayScholar') {
-        try {
-          const checkbox = form.getCheckBox('days-scholor');
-          checkbox.check();
-          console.log('✓ days-scholor');
-        } catch (error) {
-          console.warn('✗ Could not check days-scholor:', error.message);
-        }
+        setCheckbox('student-type.days-scholar', true);
       }
       
       // Travel type
@@ -265,12 +330,24 @@ export default function PDFPreviewModal({
       setTextField('contact-No-(mother)', studentData.motherContact || '');
       setTextField('contact-No-(student)', studentData.studentContact || '');
 
-      // Educational Details
-      setTextField('name-and-place-of-college', studentData.schoolName || '');
-      setTextField('register-no', studentData.registrationNo || '');
-      setTextField('type-studies', studentData.lastStudies || '');
-      setTextField('medium-of-study', studentData.mediumOfStudy || 'English');
-      setTextField('year-of-passing', studentData.yearOfPassing || '');
+     
+      setTextField(
+        'name-and-place-of-college',
+        chooseDiplomaValue('diplomaInstitution', 'schoolName', 'vocationalSchoolName', 'nameAndPlaceOfCollege')
+      );
+      setTextField(
+        'register-no',
+        chooseDiplomaValue('diplomaRegisterNo', 'registrationNo', 'registerNumber', 'registerNo')
+      );
+      setTextField('type-studies', pickValue('lastStudies', 'typeStudies'));
+      setTextField(
+        'medium-of-study',
+        (chooseDiplomaValue('diplomaProgram', 'mediumOfStudy', 'vocationalMediumOfStudy', 'medium') || 'English')
+      );
+      setTextField(
+        'year-of-passing',
+        chooseDiplomaValue('diplomaCompletionYear', 'yearOfPassing', 'vocationalYearOfPassing', 'passingYear')
+      );
 
       // SSLC Marks
       setTextField('sslc-mark', studentData.sslcMarks || '');
@@ -280,27 +357,123 @@ export default function PDFPreviewModal({
       setTextField('sslc-percentage', sslcPercentage);
 
       // HSC/CBSE Marks
-      setTextField('tamil', studentData.tamilMarks || '');
-      setTextField('english', studentData.englishMarks || '');
-      setTextField('physics', studentData.physicsMarks || '');
-      setTextField('chemistry', studentData.chemistryMarks || '');
-      setTextField('maths', studentData.mathsMarks || '');
-      setTextField('computer-science/biology', studentData.csOrBioMarks || '');
+      const chooseMarks = (vocationalKey, academicKey) => {
+        return isVocational
+          ? pickValue(vocationalKey, academicKey)
+          : pickValue(academicKey, vocationalKey);
+      };
+
+      const subjectFieldMappings = [
+        ['tamil', chooseMarks('vocationalTamilMarks', 'tamilMarks')],
+        ['english', chooseMarks('vocationalEnglishMarks', 'englishMarks')],
+        ['physics', chooseMarks('vocationalSubject3Marks', 'physicsMarks')],
+        ['chemistry', chooseMarks('vocationalSubject4Marks', 'chemistryMarks')],
+        ['maths', chooseMarks('vocationalSubject5Marks', 'mathsMarks')],
+        ['computer-science/biology', chooseMarks('vocationalSubject6Marks', 'csOrBioMarks')]
+      ];
+
+      subjectFieldMappings.forEach(([field, value]) => {
+        setTextField(field, value);
+      });
       
-      // HSC Total and Percentage
-      setTextField('hsc-total-mark', studentData.hscTotalMarks || '');
-      setTextField('hsc-mark-percentage', studentData.hscPercentage || '');
-      setTextField('cutoff', studentData.cutoffMarks || '');
+      // HSC Total and Percentage (fallbacks to vocational totals when available)
+      const hscTotalValue = chooseMarks('vocationalTotalMarks', 'hscTotalMarks');
+      const hscPercentageValue = chooseMarks('vocationalPercentage', 'hscPercentage');
+      const cutoffValue = chooseMarks('vocationalCutoff', 'cutoffMarks');
+      setTextField('hsc-total-mark', hscTotalValue);
+      setTextField('hsc-mark-percentage', hscPercentageValue);
+      setTextField('cutoff', cutoffValue);
 
       // Reference Information
       setTextField('know-about-this-college', studentData.knowAbout || '');
       setTextField('reference-name', studentData.referenceName || '');
-      setTextField('reference-contact', studentData.referenceContact || '');
+      setTextField('reference-contact-no', studentData.referenceContact || '');
+
+      // Diploma marks (conditional - only for diploma students)
+      if (studentData.lastStudies === 'Diploma') {
+        setTextField('diploma-1-to-5-sem', studentData.fifthSemMarks || '');
+        setTextField('diploma-1-to-6-sem', studentData.sixthSemMarks || '');
+      }
+
+      // Engineering eligibility/cutoff
+      setTextField('engineering-eligibility', cutoffValue);
+
+      // === FEE STRUCTURE MAPPING ===
+      console.log('💰 Mapping fee structure...\n');
+
+      if (studentData.quota === 'Government') {
+        // Government seat fees
+        setTextField('government-tuition-fee', studentData.tuitionFee || '');
+        setTextField('government-development-fee', studentData.developmentFee || '');
+        setTextField('government-admission-fee', studentData.admissionFee || '');
+        setTextField('government-caution deposit-fee', studentData.cautionDeposit || '');
+        setTextField('government-optional-fee', studentData.optionalFees || '');
+        
+        // Scholarships
+        setTextField('government-sc/st-scholorship', studentData.scStScholarship || '');
+        setTextField('government-first-graduate-fee', studentData.fgScholarship || '');
+        
+        // Transportation & Hostel
+        setTextField('government-bus-fee', studentData.busFee || '');
+        setTextField('government-mess-bill', studentData.messBill || '');
+        setTextField('government-room-rent', studentData.roomRent || '');
+        setTextField('government-laundry-fee', studentData.laundryCharges || '');
+        
+        // Totals
+        setTextField('government-tuition-total-fee', studentData.feeSubTotal || '');
+        setTextField('government-college-total-fee', studentData.feeCollegeTotal || '');
+        setTextField('government-total-hostel-fee', studentData.feeHostelTotal || '');
+        setTextField('government-overall-fee', studentData.feeOverallTotal || '');
+        
+        console.log('✓ Government fee structure mapped');
+        
+      } else if (studentData.quota === 'Management') {
+        // Management seat fees
+        setTextField('management-tuition-fee', studentData.tuitionFee || '');
+        setTextField('management-development-fee', studentData.developmentFee || '');
+        setTextField('management-admission-fee', studentData.admissionFee || '');
+        setTextField('management-caution deposit-fee', studentData.cautionDeposit || '');
+        setTextField('management-optional-fee', studentData.optionalFees || '');
+        
+        // Scholarships
+        setTextField('management-sc/st-scholarship', studentData.scStScholarship || '');
+        setTextField('management-first-graduate-fee', studentData.fgScholarship || '');
+        
+        // Transportation & Hostel
+        setTextField('management-bus-fee', studentData.busFee || '');
+        setTextField('management-mess-bill', studentData.messBill || '');
+        setTextField('management-room-rent', studentData.roomRent || '');
+        setTextField('management-laundry-fee', studentData.laundryCharges || '');
+        
+        // Totals
+        setTextField('management-tuition-total-fee', studentData.feeSubTotal || '');
+        setTextField('management-college-total-fee', studentData.feeCollegeTotal || '');
+        setTextField('management-total-hostel-fee', studentData.feeHostelTotal || '');
+        setTextField('management-overall-fee', studentData.feeOverallTotal || '');
+        
+        console.log('✓ Management fee structure mapped');
+      }
+
+      // Force pdf-lib to regenerate widget appearances so text is visible in viewers
+      form.updateFieldAppearances(defaultFont);
 
       console.log('\n✅ PDF form filling completed');
       
+      // CRITICAL: Set the NeedAppearances flag to ensure PDF viewers generate appearances
+      // This is the key to making text fields visible
+      const acroForm = pdfDoc.catalog.lookup(PDFName.of('AcroForm'));
+      if (acroForm) {
+        acroForm.set(PDFName.of('NeedAppearances'), pdfDoc.context.obj(true));
+        console.log('✅ NeedAppearances flag set');
+      }
+      
       // Save the PDF
-      const pdfBytes = await pdfDoc.save();
+      console.log('💾 Saving PDF...');
+      const pdfBytes = await pdfDoc.save({
+        useObjectStreams: false,
+        addDefaultPage: false
+      });
+      console.log('✅ PDF saved successfully');
       return pdfBytes;
 
     } catch (error) {

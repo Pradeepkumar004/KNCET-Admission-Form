@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 // import logo from "../assets/kongunadulogo.png"
 import Nav from "../Nav";
+import PDFPreviewModal from '../AdminPanel/PDFPreviewModal';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
 
@@ -10,6 +11,9 @@ const FeeStructure = () => {
   const location = useLocation();
   const applicationData = location.state?.applicationData || {};
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [admissionId, setAdmissionId] = useState("");
   const [formData, setFormData] = useState({
     // College Fees
     tuitionFee: 0,
@@ -91,6 +95,23 @@ const FeeStructure = () => {
         feeOverallTotal: totals.overallTotal,
       };
 
+      // Generate admission ID if status is Admitted
+      if (formData.status === 'Admitted') {
+        let currentCount = localStorage.getItem("appIdCounter");
+        if (!currentCount) {
+          currentCount = 0;
+        } else {
+          currentCount = parseInt(currentCount);
+        }
+        currentCount += 1;
+        localStorage.setItem("appIdCounter", currentCount);
+
+        const paddedCount = String(currentCount).padStart(4, '0');
+        const generatedAdmissionId = `26KNF${paddedCount}`;
+        setAdmissionId(generatedAdmissionId);
+        dataToSave.admissionId = generatedAdmissionId;
+      }
+
       // Save to backend
       const params = new URLSearchParams();
       params.append("_method", "PUT");
@@ -103,27 +124,9 @@ const FeeStructure = () => {
       const responseData = await response.json();
 
       if (response.ok && !responseData.error) {
-        // Backend save successful
-        if (formData.status === 'Admitted') {
-          // Generate Application ID
-          let currentCount = localStorage.getItem("appIdCounter");
-          if (!currentCount) {
-            currentCount = 0;
-          } else {
-            currentCount = parseInt(currentCount);
-          }
-
-          currentCount += 1;
-          localStorage.setItem("appIdCounter", currentCount);
-
-          const paddedCount = String(currentCount).padStart(4, '0');
-          const applicationId = `26KNF${paddedCount}`;
-
-          navigate("/application-success", { state: { applicationId, status: formData.status } });
-        } else {
-          // For Pending or Cancel, navigate to dashboard
-          navigate("/admindashboard");
-        }
+        // Update local applicationData
+        Object.assign(applicationData, dataToSave);
+        setShowSuccessModal(true);
       } else {
         alert("Failed to save data: " + (responseData.error || "Unknown error"));
       }
@@ -141,14 +144,18 @@ const FeeStructure = () => {
 
   return (
     <>
-      {/* <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center space-x-4">
-          <img src={logo} alt="KNCET Logo" className="h-12 w-auto" />
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">
-            Kongunadu College of Engineering and Technology
-          </h1>
-        </div>
-      </nav> */}
+      {/* Internal Style to hide the up/down arrows (spinners) on number inputs */}
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+
       <Nav />
       <div className="min-h-screen bg-gray-100 p-8 flex justify-center pb-20">
 
@@ -156,7 +163,7 @@ const FeeStructure = () => {
 
           {/* Header */}
           <div className="bg-[#e91e63] text-white p-4 text-center font-bold text-xl uppercase tracking-wider">
-            Fee Structure Analysis (Per Year)
+            Fee Structure
           </div>
 
           <table className="w-full border-collapse">
@@ -185,6 +192,7 @@ const FeeStructure = () => {
                     <input
                       type="number"
                       name={item.name}
+                      min="0"
                       onChange={handleInputChange}
                       className="w-full p-1 border rounded text-center"
                       placeholder="0"
@@ -204,13 +212,13 @@ const FeeStructure = () => {
               <tr className="bg-red-50">
                 <td className="p-3 border">SC / ST Scholarship (Income &lt; 2.5L)</td>
                 <td className="p-3 border">
-                  <input type="number" name="scStScholarship" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                  <input type="number" name="scStScholarship" min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                 </td>
               </tr>
               <tr className="bg-red-50">
                 <td className="p-3 border">FG - First Graduate Scholarship</td>
                 <td className="p-3 border">
-                  <input type="number" name="fgScholarship" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                  <input type="number" name="fgScholarship" min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                 </td>
               </tr>
               <tr className="bg-gray-800 text-white font-bold">
@@ -225,7 +233,7 @@ const FeeStructure = () => {
               <tr className="bg-pink-50">
                 <td className="p-3 border font-semibold italic">Bus Fee (Per Year)</td>
                 <td className="p-3 border">
-                  <input type="number" name="busFee" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                  <input type="number" name="busFee" min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                 </td>
               </tr>
 
@@ -241,7 +249,7 @@ const FeeStructure = () => {
                 <tr key={item.name} className="bg-green-50">
                   <td className="p-3 border">{item.label}</td>
                   <td className="p-3 border">
-                    <input type="number" name={item.name} onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                    <input type="number" name={item.name} min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                   </td>
                 </tr>
               ))}
@@ -258,17 +266,7 @@ const FeeStructure = () => {
             </tbody>
           </table>
 
-          {/* Department Selection and Submit */}
-          {/* <select
-            className="p-2 border border-blue-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
-            >
-            <option value="">Select Department</option>
-            {departments.map(dept => (
-              <option key={dept} value={dept}>{dept}</option>
-              ))}
-              </select> */}
+          {/* Status Buttons and Submit Section */}
           <div className="p-6 bg-gray-50 border-t border-gray-200">
             <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Application Status</label>
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -297,7 +295,7 @@ const FeeStructure = () => {
                   : "bg-white text-gray-600 border-gray-200 hover:border-red-400 hover:text-red-600"
                   }`}
               >
-                Cancel
+                Canceled
               </button>
             </div>
 
@@ -312,16 +310,71 @@ const FeeStructure = () => {
               </button>
             </div>
           </div>
-
-
-
-
-
-
-
-
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-8 text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Data Successfully Stored!</h3>
+              <p className="text-gray-600 mb-4">
+                Fee information has been saved successfully.
+              </p>
+
+              {formData.status === 'Admitted' && admissionId && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-gray-600 mb-1">Admission ID</p>
+                  <p className="text-2xl font-bold text-green-700">{admissionId}</p>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    navigate('/admindashboard');
+                  }}
+                  className="px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setShowPDFPreview(true);
+                  }}
+                  className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span>Preview PDF</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Preview Modal */}
+      <PDFPreviewModal
+        isOpen={showPDFPreview}
+        onClose={() => {
+          setShowPDFPreview(false);
+          navigate('/admindashboard');
+        }}
+        studentData={applicationData}
+        studentName={applicationData.fullName}
+      />
     </>
   );
 };
