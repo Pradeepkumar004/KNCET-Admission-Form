@@ -7,6 +7,7 @@ const PersonalInfo = () => {
 
   const [photo, setPhoto] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     preference1: '',
     preference2: '',

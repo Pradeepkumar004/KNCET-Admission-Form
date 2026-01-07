@@ -17,6 +17,12 @@ export default function EditApplicationModal({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
 
+  // Bus stop autocomplete states
+  const [busStopsData, setBusStopsData] = useState([]);
+  const [busStopSearch, setBusStopSearch] = useState('');
+  const [busStopSuggestions, setBusStopSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   const degree = [
     { id: 1, department: "AD(Artificial and Data Science Engineering)" },
     { id: 2, department: "AGRI(Agricultural Engineering)" },
@@ -33,8 +39,75 @@ export default function EditApplicationModal({
   useEffect(() => {
     if (applicationData) {
       setEditData(applicationData);
+      // Set bus stop search to existing value
+      setBusStopSearch(applicationData.busStopName || '');
     }
   }, [applicationData]);
+
+  // Load bus stops data from csv.json
+  useEffect(() => {
+    const loadBusStops = async () => {
+      try {
+        const response = await fetch('/busData.json');
+        const data = await response.json();
+        setBusStopsData(data);
+      } catch (error) {
+        console.error('Error loading bus stops data:', error);
+      }
+    };
+    loadBusStops();
+  }, []);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.bus-stop-autocomplete')) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Handle bus stop search input
+  const handleBusStopSearch = (e) => {
+    const searchValue = e.target.value;
+    setBusStopSearch(searchValue);
+    
+    if (searchValue.length >= 3) {
+      const filtered = busStopsData.filter(stop => 
+        stop.busStopName && stop.busStopName.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setBusStopSuggestions(filtered.slice(0, 10));
+      setShowSuggestions(true);
+    } else {
+      setBusStopSuggestions([]);
+      setShowSuggestions(false);
+      if (searchValue.length === 0) {
+        setEditData(prev => ({
+          ...prev,
+          busStopName: '',
+          busRoute: '',
+          busNo: '',
+          busFees: ''
+        }));
+      }
+    }
+  };
+
+  // Handle bus stop selection from suggestions
+  const handleBusStopSelect = (stop) => {
+    setBusStopSearch(stop.busStopName);
+    setEditData(prev => ({
+      ...prev,
+      busStopName: stop.busStopName,
+      busRoute: stop.route,
+      busNo: stop.routeNo.toString(),
+      busFees: stop.semFees.toString()
+    }));
+    setShowSuggestions(false);
+    setBusStopSuggestions([]);
+  };
 
   const handleInputChange = (field, value) => {
     setEditData(prev => {
@@ -585,6 +658,8 @@ export default function EditApplicationModal({
         </label>
       </div>
 
+
+
       {editData.gender && (
         <div className="pt-4 border-t border-gray-200 space-y-3">
           <label className="block text-xs font-bold text-gray-400 uppercase">
@@ -634,6 +709,7 @@ export default function EditApplicationModal({
             </div>
           )}
 
+
           {editData.accommodation === "DayScholar" && (
             <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
               <select
@@ -646,14 +722,75 @@ export default function EditApplicationModal({
                 <option value="CollegeBus">College Bus</option>
                 <option value="OutBus">Own/Outside Travel</option>
               </select>
+              
+              {/* Bus Stop Autocomplete - Only shown when College Bus is selected */}
               {editData.travelType === "CollegeBus" && (
-                <input
-                  type="text"
-                  value={editData.busStop || ""}
-                  onChange={(e) => handleInputChange("busStop", e.target.value)}
-                  className="w-full text-sm px-3 py-2 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Enter bus stop name"
-                />
+                <div className="mt-3 space-y-3 bus-stop-autocomplete">
+                  {/* Bus Stop Name with Autocomplete */}
+                  <div className="relative">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Bus Stop Name</label>
+                    <input
+                      type="text"
+                      value={busStopSearch}
+                      onChange={handleBusStopSearch}
+                      onFocus={() => busStopSearch.length >= 4 && setShowSuggestions(true)}
+                      placeholder="Type at least 4 characters to search..."
+                      className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    />
+                    {/* Suggestions Dropdown */}
+                    {showSuggestions && busStopSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {busStopSuggestions.map((stop, index) => (
+                          <div
+                            key={index}
+                            onClick={() => handleBusStopSelect(stop)}
+                            className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
+                          >
+                            <span className="font-medium">{stop.busStopName}</span>
+                            <span className="text-xs text-gray-500 ml-2">({stop.route})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Route - Auto-populated */}
+                  {editData.busStopName && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Route</label>
+                        <input
+                          type="text"
+                          value={editData.busRoute || ''}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-lg outline-none cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* Bus No - Auto-populated */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Bus No</label>
+                        <input
+                          type="text"
+                          value={editData.busNo || ''}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-lg outline-none cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* Bus Fees - Auto-populated */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Bus Fees (Per Semester)</label>
+                        <input
+                          type="text"
+                          value={editData.busFees ? `₹${editData.busFees}` : ''}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-lg outline-none cursor-not-allowed font-semibold text-green-700"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           )}
