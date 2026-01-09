@@ -8,7 +8,7 @@ const Sucess = () => {
     const { applicationId } = location.state || {}; // Destructure applicationId from state
     const navigate = useNavigate();
     const handleNav = () => {
-        navigate('/admindashboard');
+        navigate('/admin');
     }
     return (
         <>

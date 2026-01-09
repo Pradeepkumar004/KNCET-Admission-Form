@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/kongunadulogo.png"
+import Nav from "../Nav"; 
+
 
 const VocationalScores = () => {
     const navigate = useNavigate();
@@ -37,6 +38,12 @@ const VocationalScores = () => {
             newScores[index].obtained = value;
             setScores(newScores);
         }
+    };
+
+    const handleSubjectChange = (index, value) => {
+        const newScores = [...scores];
+        newScores[index].subject = value;
+        setScores(newScores);
     };
 
     const handleNavigate = () => {
@@ -120,12 +127,7 @@ const VocationalScores = () => {
     return (
         <>
             {/* top */}
-            <div className="py-1 ml-10 flex flex-row font-bold ">
-                <img src={logo} className="w-10  " alt="Logo" />
-                <h1 className="py-5  px-3 text-2xl mt-3 ">
-                    Kongunadu college of Engineering and Technology
-                </h1>
-            </div>
+            <Nav />
 
             <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
                 <div className="max-w-4xl w-full bg-white shadow p-6 rounded-md">
@@ -209,12 +211,12 @@ const VocationalScores = () => {
                             </thead>
                             <tbody>
                                 {scores.map((s, idx) => (
-                                    <tr key={s.subject} className="text-sm">
+                                    <tr key={idx} className="text-sm">
                                         <td className="p-3 border">
                                             <input
                                                 type="text"
                                                 value={s.subject}
-                                                onChange={(e) => handleScoreChange(idx, e.target.value)}
+                                                onChange={(e) => handleSubjectChange(idx, e.target.value)}
                                                 placeholder="Enter Your Subject"
                                                 className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 " />
                                         </td>
@@ -299,7 +301,7 @@ const VocationalScores = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Eligiblity
+                                Engineering Eligiblity
                             </label>
                             <input
                                 type="number"

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/kongunadulogo.png"
-
+import Nav from "../Nav";
 const DiplomaScores = () => {
   const navigate = useNavigate();
 
@@ -27,6 +26,7 @@ const DiplomaScores = () => {
   const [diplomaDetails, setDiplomaDetails] = useState({
     program: '',
     institution: '',
+    registerNo: '',
     completionDate: ''
   });
 
@@ -74,13 +74,7 @@ const DiplomaScores = () => {
     <>
 
       {/* top */}
-      <div className="py-1 ml-10 flex flex-row font-bold ">
-        <img src={logo} className="w-10  " />
-        <h1 className="py-5  px-3 text-2xl mt-3 ">
-          Kongunadu college of Engineering and Technology
-        </h1>
-
-      </div>
+        <Nav />
 
 
       <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
@@ -101,7 +95,7 @@ const DiplomaScores = () => {
                 type="text"
                 value={diplomaDetails.program}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, program: e.target.value })}
-                className="mt-1 w-90 border-gray-300 rounded-md p-3 border "
+                className="mt-1 w-full border-gray-300 rounded-md p-3 border "
                 placeholder="Enter your Diploma Program"
               />
             </div>
@@ -111,7 +105,7 @@ const DiplomaScores = () => {
                 type="text"
                 value={diplomaDetails.institution}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, institution: e.target.value })}
-                className="mt-1 w-90 border-gray-300 rounded-md p-3 border "
+                className="mt-1 w-full border-gray-300 rounded-md p-3 border "
                 placeholder="Enter your Institution"
               />
             </div>
@@ -119,9 +113,9 @@ const DiplomaScores = () => {
               <label className="block text-sm font-medium text-gray-700">Register/Roll No</label>
               <input
                 type="text"
-                value={diplomaDetails.institution}
-                onChange={(e) => setDiplomaDetails({ ...diplomaDetails, institution: e.target.value })}
-                className="mt-1 w-90 border-gray-300 rounded-md p-3 border "
+                value={diplomaDetails.registerNo}
+                onChange={(e) => setDiplomaDetails({ ...diplomaDetails, registerNo: e.target.value })}
+                className="mt-1 w-full border-gray-300 rounded-md p-3 border "
                 placeholder="Enter your Register/Roll No"
               />
             </div>
@@ -131,8 +125,8 @@ const DiplomaScores = () => {
                 type="number"
                 value={diplomaDetails.completionDate}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, completionDate: e.target.value })}
-                className="mt-1 w-90 border-gray-300 rounded-md p-3 border"
-                  placeholder="Enter your completion year"
+                className="mt-1 w-full border-gray-300 rounded-md p-3 border"
+                placeholder="Enter your completion year"
               />
             </div>
           </div>
@@ -153,7 +147,7 @@ const DiplomaScores = () => {
                 max="100"
                 value={fifthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setFifthSemMarks)}
-                className="mt-1 w-90 border-gray-300 rounded-md p-3 border"
+                className="mt-1 w-full border-gray-300 rounded-md p-3 border"
                 placeholder="Enter your up 1st to 5th semester marks"
               />
             </div>
@@ -171,7 +165,7 @@ const DiplomaScores = () => {
                 max="100"
                 value={sixthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setSixthSemMarks)}
-                className="mt-1 w-90 border-gray-300 rounded-md p-3 border"
+                className="mt-1 w-full border-gray-300 rounded-md p-3 border"
                 placeholder="Enter your up 1st to 6th semester marks"
               />
             </div>

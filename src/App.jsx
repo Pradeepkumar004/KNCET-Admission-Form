@@ -28,43 +28,20 @@ function App() {
         {/* Public Routes */}
         <Route path='/login' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
+        <Route path='/' element={<PersonalInfo />} />
+        <Route path='/HSCInfo' element={<PersonalInfo />} />
+        <Route path='/CBSEInfo' element={<PersonalInfo />} />
+        <Route path='/diplomaInfo' element={<PersonalInfo />} />
+        <Route path='/VocationalInfo' element={<PersonalInfo />} />
+        <Route path='/success' element={<PersonalInfo />} />
 
         {/* Protected StudentPanel Routes */}
-        <Route path='/' element={
+        {/* <Route path='/' element={
           <ProtectedRoute>
             <PersonalInfo />
           </ProtectedRoute>
-        } />
-        <Route path='/PersonalInfo' element={
-          <ProtectedRoute>
-            <PersonalInfo />
-          </ProtectedRoute>
-        } />
-        <Route path='/HSCInfo' element={
-          <ProtectedRoute>
-            <AcademicScores />
-          </ProtectedRoute>
-        } />
-        <Route path='/CBSEInfo' element={
-          <ProtectedRoute>
-            <CBSEScore />
-          </ProtectedRoute>
-        } />
-        <Route path='/diplomaInfo' element={
-          <ProtectedRoute>
-            <DiplomaScores />
-          </ProtectedRoute>
-        } />
-        <Route path='/VocationalInfo' element={
-          <ProtectedRoute>
-            <VocationalScores />
-          </ProtectedRoute>
-        } />
-        <Route path='/success' element={
-          <ProtectedRoute>
-            <Sucess />
-          </ProtectedRoute>
-        } />
+        } /> */}
+       
 
         {/* Protected Fees Route */}
         <Route path='/feesInfo' element={
@@ -74,7 +51,7 @@ function App() {
         } />
 
         {/* Protected AdminPanel Routes */}
-        <Route path='/admindashboard' element={
+        <Route path='/admin' element={
           <ProtectedRoute>
             <AdminDashboard />
           </ProtectedRoute>

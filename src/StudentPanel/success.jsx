@@ -292,17 +292,9 @@ const Sucess = () => {
         <>
             <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
                 {/* Top Navigation / Logo Bar */}
-                {/* <nav className="bg-white shadow-sm border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 sm:flex-row">
-                        <img src={Logo} alt="KNCET Logo" className="h-12 w-auto" />
-                        <h1 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight text-center">
-                            Kongunadu College of Engineering and Technology
-                        </h1>
-                    </div>
-                </nav> */}
-                <div>
+      
                 <Nav/>
-                </div>
+               
 
                 <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
                     {/* Success Content */}

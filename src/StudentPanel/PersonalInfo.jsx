@@ -177,7 +177,7 @@ const PersonalInfo = () => {
         // Keep loading screen visible for a moment before navigation
         setTimeout(() => {
           setIsLoading(false);
-          alert('Data sent successfully!');
+          // alert('Data sent successfully!');
           handleNavigate();
         }, 1000);
       } else if (result.error) {

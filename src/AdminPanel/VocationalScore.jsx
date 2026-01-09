@@ -45,6 +45,12 @@ const AdminVocationalScores = () => {
         }
     };
 
+    const handleSubjectChange = (index, value) => {
+        const newScores = [...scores];
+        newScores[index].subject = value;
+        setScores(newScores);
+    };
+
     const handleNavigate = async () => {
         setIsSaving(true);
         try {
@@ -229,12 +235,12 @@ const AdminVocationalScores = () => {
                             </thead>
                             <tbody>
                                 {scores.map((s, idx) => (
-                                    <tr key={s.subject} className="text-sm">
+                                    <tr key={idx} className="text-sm">
                                         <td className="p-3 border">
                                             <input
                                                 type="text"
                                                 value={s.subject}
-                                                onChange={(e) => handleScoreChange(idx, e.target.value)}
+                                                onChange={(e) => handleSubjectChange(idx, e.target.value)}
                                                 placeholder="Enter Your Subject"
                                                 className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 " />
                                         </td>
@@ -319,7 +325,7 @@ const AdminVocationalScores = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Eligiblity
+                                Engineering Eligiblity
                             </label>
                             <input
                                 type="number"

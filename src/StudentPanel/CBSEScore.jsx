@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/kongunadulogo.png"
+import Nav from "../Nav";
 
 const AcademicScores = () => {
     const navigate = useNavigate();
@@ -134,12 +134,7 @@ const AcademicScores = () => {
     return (
         <>
             {/* top */}
-            <div className="py-1 ml-10 flex flex-row font-bold ">
-                <img src={logo} className="w-10  " alt="Logo" />
-                <h1 className="py-5  px-3 text-2xl mt-3 ">
-                    Kongunadu college of Engineering and Technology
-                </h1>
-            </div>
+            <Nav />
 
             <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
                 <div className="max-w-4xl w-full bg-white shadow p-6 rounded-md">

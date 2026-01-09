@@ -14,7 +14,7 @@ const Login = () => {
   const location = useLocation();
 
   // Check if user is trying to access admin dashboard
-  const from = location.state?.from?.pathname || '/admindashboard';
+  const from = location.state?.from?.pathname || '/admin';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
