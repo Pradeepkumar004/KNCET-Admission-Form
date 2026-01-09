@@ -762,8 +762,8 @@ export default function EditApplicationModal({
                         <input
                           type="text"
                           value={editData.busRoute || ''}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-lg outline-none cursor-not-allowed"
+                          onChange={(e) => handleInputChange('busRoute', e.target.value)}
+                          className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
@@ -773,8 +773,8 @@ export default function EditApplicationModal({
                         <input
                           type="text"
                           value={editData.busNo || ''}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-lg outline-none cursor-not-allowed"
+                          onChange={(e) => handleInputChange('busNo', e.target.value)}
+                          className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
@@ -783,9 +783,10 @@ export default function EditApplicationModal({
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Bus Fees (Per Semester)</label>
                         <input
                           type="text"
-                          value={editData.busFees ? `₹${editData.busFees}` : ''}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded-lg outline-none cursor-not-allowed font-semibold text-green-700"
+                          value={editData.busFees || ''}
+                          onChange={(e) => handleInputChange('busFees', e.target.value)}
+                          placeholder="₹"
+                          className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-green-700"
                         />
                       </div>
                     </>

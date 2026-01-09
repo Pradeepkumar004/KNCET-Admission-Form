@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^1.0.6",
     "@tailwindcss/vite": "^4.1.13",
+    "firebase": "^12.7.0",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "pdf-lib": "^1.17.1",

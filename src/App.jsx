@@ -5,7 +5,6 @@ import PersonalInfo from './StudentPanel/PersonalInfo'
 import AcademicScores from './StudentPanel/AcadamicScore'
 import FeesInfo from './FeesPanel/FeesInfo'
 import VocationalScores from './StudentPanel/Vocational'
-
 import Sucess from './StudentPanel/success'
 import AdminSuccess from './AdminPanel/success'
 import DiplomaScores from './StudentPanel/DiplomaScores'
@@ -15,6 +14,9 @@ import AdminAcademicScores from './AdminPanel/AcadamicScore';
 import AdminCBSEScore from './AdminPanel/CBSEScore';
 import AdminVocationalScores from './AdminPanel/VocationalScore';
 import AdminDiplomaScores from './AdminPanel/DiplamoScore';
+import Login from './components/Login';
+import Signup from './components/Signup';
+import ProtectedRoute from './components/ProtectedRoute';
 
 
 
@@ -23,29 +25,85 @@ function App() {
   return (
     <>
       <Routes>
-        {/* StudentPanel */}
-        <Route path='/' element={<PersonalInfo />} />
-        <Route path='/PersonalInfo' element={<PersonalInfo />} />
-        <Route path='/HSCInfo' element={<AcademicScores />} />
-        <Route path='/CBSEInfo' element={<CBSEScore />} />
-        <Route path='/diplomaInfo' element={<DiplomaScores />} />
-        <Route path='/VocationalInfo' element={<VocationalScores />} />
-        <Route path='/success' element={<Sucess />} />
+        {/* Public Routes */}
+        <Route path='/login' element={<Login />} />
+        <Route path='/signup' element={<Signup />} />
 
+        {/* Protected StudentPanel Routes */}
+        <Route path='/' element={
+          <ProtectedRoute>
+            <PersonalInfo />
+          </ProtectedRoute>
+        } />
+        <Route path='/PersonalInfo' element={
+          <ProtectedRoute>
+            <PersonalInfo />
+          </ProtectedRoute>
+        } />
+        <Route path='/HSCInfo' element={
+          <ProtectedRoute>
+            <AcademicScores />
+          </ProtectedRoute>
+        } />
+        <Route path='/CBSEInfo' element={
+          <ProtectedRoute>
+            <CBSEScore />
+          </ProtectedRoute>
+        } />
+        <Route path='/diplomaInfo' element={
+          <ProtectedRoute>
+            <DiplomaScores />
+          </ProtectedRoute>
+        } />
+        <Route path='/VocationalInfo' element={
+          <ProtectedRoute>
+            <VocationalScores />
+          </ProtectedRoute>
+        } />
+        <Route path='/success' element={
+          <ProtectedRoute>
+            <Sucess />
+          </ProtectedRoute>
+        } />
 
-        <Route path='/feesInfo' element={<FeesInfo />} />
+        {/* Protected Fees Route */}
+        <Route path='/feesInfo' element={
+          <ProtectedRoute>
+            <FeesInfo />
+          </ProtectedRoute>
+        } />
 
-
-
-        {/* AdminPanel */}
-
-        <Route path='/admindashboard' element={<AdminDashboard />} />
-        <Route path='/application-success' element={<AdminSuccess />} />
-        <Route path='/admin/academic-score' element={<AdminAcademicScores />} />
-        <Route path='/admin/cbse-score' element={<AdminCBSEScore />} />
-        <Route path='/admin/vocational-score' element={<AdminVocationalScores />} />
-        <Route path='/admin/diploma-score' element={<AdminDiplomaScores />} />
-
+        {/* Protected AdminPanel Routes */}
+        <Route path='/admindashboard' element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path='/application-success' element={
+          <ProtectedRoute>
+            <AdminSuccess />
+          </ProtectedRoute>
+        } />
+        <Route path='/admin/academic-score' element={
+          <ProtectedRoute>
+            <AdminAcademicScores />
+          </ProtectedRoute>
+        } />
+        <Route path='/admin/cbse-score' element={
+          <ProtectedRoute>
+            <AdminCBSEScore />
+          </ProtectedRoute>
+        } />
+        <Route path='/admin/vocational-score' element={
+          <ProtectedRoute>
+            <AdminVocationalScores />
+          </ProtectedRoute>
+        } />
+        <Route path='/admin/diploma-score' element={
+          <ProtectedRoute>
+            <AdminDiplomaScores />
+          </ProtectedRoute>
+        } />
 
       </Routes>
 
