@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Nav from "../Nav";
-const DiplomaScores = () => {
+
+const DiplomaScores = ({ personalData }) => {
   const navigate = useNavigate();
-
-
 
   const [fifthSemMarks, setFifthSemMarks] = useState("");
   const [sixthSemMarks, setSixthSemMarks] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Google Apps Script endpoint
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyksQyXlpXq4IbzeTymBf1Jla1KIMsAGseNIciIJb-BRON5RuCdMYT-b9BdwpOzMoBThQ/exec";
 
   const handleSemesterMarkChange = (value, setter) => {
     if (value === "") {
@@ -32,31 +34,79 @@ const DiplomaScores = () => {
 
 
 
-  const handleNavigate = () => {
-    // Generate Enquiry ID
-    let currentEnqId = localStorage.getItem("enqIdCounter");
-    if (!currentEnqId) {
-      currentEnqId = 0;
-    } else {
-      currentEnqId = parseInt(currentEnqId);
+  const handleNavigate = async () => {
+    // Validate required fields
+    if (!diplomaDetails.program || !diplomaDetails.institution || !diplomaDetails.registerNo || !diplomaDetails.completionDate) {
+      alert("Please fill in all diploma details");
+      return;
     }
-    currentEnqId += 1;
-    localStorage.setItem("enqIdCounter", currentEnqId);
 
-    // Format: KN26EQ0001
-    const paddedEnqCount = String(currentEnqId).padStart(4, '0');
-    const enquiryId = `KN26EQ${paddedEnqCount}`;
+    if (!fifthSemMarks || !sixthSemMarks) {
+      alert("Please enter marks for 5th and 6th semesters");
+      return;
+    }
 
-    // Save to local storage if needed, similar to other forms
-    const diplomaData = {
-      enquiryId,
-      diplomaDetails,
-      fifthSemMarks,
-      sixthSemMarks
-    };
-    localStorage.setItem('academicScoresData', JSON.stringify(diplomaData));
+    // Check if personal data is available
+    if (!personalData || !personalData.fullName) {
+      alert("Error: Personal information not found. Please complete Personal Information form first.");
+      return;
+    }
 
-    navigate("/success", { state: { enquiryId } });
+    setIsLoading(true);
+
+    try {
+      console.log("Submitting combined personal and diploma data...");
+      
+      // Prepare combined data (personal + scores)
+      const combinedData = {
+        action: "submitStudentData",
+        // Personal info fields
+        ...personalData,
+        // Score fields
+        courseType: "Diploma",
+        schoolName: diplomaDetails.institution,
+        registerNumber: diplomaDetails.registerNo,
+        medium: diplomaDetails.program,
+        yearOfPassing: diplomaDetails.completionDate,
+        subject1: "1st to 5th Semester",
+        subject1Marks: fifthSemMarks,
+        subject2: "1st to 6th Semester",
+        subject2Marks: sixthSemMarks,
+        totalMarks: (parseFloat(fifthSemMarks) + parseFloat(sixthSemMarks)) / 2,
+        percentage: ((parseFloat(fifthSemMarks) + parseFloat(sixthSemMarks)) / 2),
+        cutoff: ((parseFloat(fifthSemMarks) + parseFloat(sixthSemMarks)) / 2),
+        date: new Date().toISOString()
+      };
+
+      console.log("Combined data to submit:", combinedData);
+
+      // Send to Google Apps Script
+      const params = new URLSearchParams(combinedData).toString();
+      const url = `${GOOGLE_SCRIPT_URL}?${params}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+      });
+
+      const result = await response.json();
+      console.log("Response from server:", result);
+
+      if (result.success && result.enquiryId) {
+        // Save enquiry ID to localStorage
+        localStorage.setItem('enquiryId', result.enquiryId);
+        localStorage.setItem('studentName', personalData.fullName);
+        
+        setIsLoading(false);
+        navigate("/success", { state: { enquiryId: result.enquiryId } });
+      } else {
+        setIsLoading(false);
+        alert("Error: " + (result.message || "Failed to save data"));
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      setIsLoading(false);
+      alert("Error: " + error.message);
+    }
   }
 
   const handleUploadChange = (e) => {
@@ -66,29 +116,31 @@ const DiplomaScores = () => {
 
 
 
-  const [termsAccepted, setTermsAccepted] = useState(false);
-
 
 
   return (
     <>
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-2xl font-bold text-blue-900">Submitting Scores...</p>
+            <p className="text-sm text-gray-600 mt-2">Please wait while we save your scores</p>
+          </div>
+        </div>
+      )}
 
-      {/* top */}
-        <Nav />
-
-
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
-        <div className="max-w-4xl w-full bg-white shadow p-6 rounded-md">
-
-          <h2 className=" text-4xl font-semibold text-gray-800">
+      <section className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+        <div className="bg-blue-600 px-8 py-5">
+          <h2 className="text-2xl font-bold text-white flex items-center">
             Diploma Scores
           </h2>
-          <p className="text-lg text-gray-700">
-            Enter your diploma scores to complete your application.
-          </p>
+        </div>
 
+        <div className="p-8 space-y-6">
           {/* details */}
-          <div className="mt-6 grid md:grid-cols-2 gap-4 font-semibold">
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Department</label>
               <input
@@ -96,7 +148,8 @@ const DiplomaScores = () => {
                 value={diplomaDetails.program}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, program: e.target.value })}
                 className="mt-1 w-full border-gray-300 rounded-md p-3 border "
-                placeholder="Enter your Diploma Program"
+                placeholder="Enter Your Diploma Program"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
             <div>
@@ -106,7 +159,8 @@ const DiplomaScores = () => {
                 value={diplomaDetails.institution}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, institution: e.target.value })}
                 className="mt-1 w-full border-gray-300 rounded-md p-3 border "
-                placeholder="Enter your Institution"
+                placeholder="Enter Your Institution"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
             <div>
@@ -116,7 +170,8 @@ const DiplomaScores = () => {
                 value={diplomaDetails.registerNo}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, registerNo: e.target.value })}
                 className="mt-1 w-full border-gray-300 rounded-md p-3 border "
-                placeholder="Enter your Register/Roll No"
+                placeholder="Enter Your Register/Roll No"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
             <div>
@@ -126,7 +181,7 @@ const DiplomaScores = () => {
                 value={diplomaDetails.completionDate}
                 onChange={(e) => setDiplomaDetails({ ...diplomaDetails, completionDate: e.target.value })}
                 className="mt-1 w-full border-gray-300 rounded-md p-3 border"
-                placeholder="Enter your completion year"
+                placeholder="Enter Your Completion Year"
               />
             </div>
           </div>
@@ -148,7 +203,7 @@ const DiplomaScores = () => {
                 value={fifthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setFifthSemMarks)}
                 className="mt-1 w-full border-gray-300 rounded-md p-3 border"
-                placeholder="Enter your up 1st to 5th semester marks"
+                placeholder="Enter Your Up 1st To 5th Semester Marks"
               />
             </div>
 
@@ -166,52 +221,28 @@ const DiplomaScores = () => {
                 value={sixthSemMarks}
                 onChange={(e) => handleSemesterMarkChange(e.target.value, setSixthSemMarks)}
                 className="mt-1 w-full border-gray-300 rounded-md p-3 border"
-                placeholder="Enter your up 1st to 6th semester marks"
+                placeholder="Enter Your Up 1st To 6th Semester Marks"
               />
             </div>
 
 
-            {/* eligiblity */}
-
-            {/* <div>
-                <label className="block text-sm font-medium text-gray-700">
-                    Eligibility
-                </label>
-                <input
-                    type="text"
-                    value={percentage >= 40 ? "Eligible" : "Not Eligible"}
-                    readOnly
-                    className="mt-1 w-full border-gray-300 rounded-md bg-gray-100 p-3 font-bold text-blue-600"
-                />
-            </div> */}
+            
           </div>
 
           
 
           {/* Submit */}
           <div className="mt-6 flex justify-end items-center gap-4">
-            <label className="flex items-center space-x-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span>I accept the Terms and Conditions</span>
-            </label>
-
             <button
               type="submit"
-              className={`px-6 py-2 text-white rounded-md transition duration-200 ${termsAccepted ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
-                }`}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200"
               onClick={handleNavigate}
-              disabled={!termsAccepted}
             >
               Submit
             </button>
           </div>
         </div>
-      </div>
+      </section>
     </>
   );
 };

@@ -5,8 +5,19 @@ import { SearchIcon } from "@heroicons/react/solid";
 import Nav from "../Nav";
 import EditApplicationModal from "./EditApplicationModal";
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlKdwAYiJ-Cw_Iy3ntPJrZgj2AhCD7XN8ekA4FYmyxHmIVjtkZZBR-SmDas7mfRaPR5g/exec";
 
+// Format ISO date to readable format
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch (e) {
+    return "N/A";
+  }
+};
 
 export default function Dashboard() {
   const [applications, setApplications] = useState([]);
@@ -18,13 +29,15 @@ export default function Dashboard() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  // Fetch all applications
+  const fetchApplications = () => {
     fetch(GOOGLE_SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
         // Ensure data is an array, not an error object
         if (Array.isArray(data)) {
           setApplications(data);
+          console.log("✅ Applications refreshed, total:", data.length);
         } else if (data && data.error) {
           console.error("API Error:", data.error);
           setApplications([]);
@@ -37,13 +50,17 @@ export default function Dashboard() {
         console.error("Failed to fetch data", err);
         setApplications([]);
       });
+  };
+
+  useEffect(() => {
+    fetchApplications();
   }, []);
 
   const filteredApps = Array.isArray(applications) ? applications.filter((app) => {
     const matchesSearch =
       (app.fullName && app.fullName.toLowerCase().includes(search.toLowerCase())) ||
       (app.email && app.email.toLowerCase().includes(search.toLowerCase())) ||
-      (app.id && app.id.toLowerCase().includes(search.toLowerCase()));
+      (app.enquiryId && app.enquiryId.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = filterStatus === "All" || app.status === filterStatus;
     return matchesSearch && matchesStatus;
   }) : [];
@@ -99,7 +116,8 @@ export default function Dashboard() {
   // Dynamic counts
   const totalCount = applications.length;
   const registeredCount = totalCount; // All data coming in are registered students
-  const AdmittedCount = applications.filter(app => app.status === "Admitted").length;
+  const AdmittedCount = applications.filter(app => app.admissionId && app.admissionId !== "").length; // Ever admitted (has admission ID)
+  const LiveCount = applications.filter(app => app.status === "Admitted").length; // Currently admitted students
   const PendingCount = applications.filter(app => app.status === "Pending").length;
   const cancelCount = applications.filter(app => app.status === "cancel").length;
 
@@ -118,9 +136,15 @@ export default function Dashboard() {
   }
 
   const handleUpdateSuccess = (updatedData) => {
-    setApplications(applications.map(app => 
-      app.email === updatedData.email ? updatedData : app
-    ));
+    console.log("✅ Update successful, refreshing applications list...");
+    console.log("📊 Updated Data:", updatedData);
+    
+    // Refresh the applications list from server to get latest data
+    // This ensures status, admission ID, and all fee information are current
+    setTimeout(() => {
+      fetchApplications();
+      console.log("✅ Dashboard refreshed with latest data");
+    }, 500); // Small delay to ensure backend has committed all changes
   }
 
   const handleCloseModal = () => {
@@ -163,7 +187,7 @@ export default function Dashboard() {
           </header>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             <>
               <div
                 onClick={() => setFilterStatus("All")}
@@ -188,6 +212,19 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Admitted</p>
                   <p className="text-2xl font-bold text-green-600">{AdmittedCount}</p>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setFilterStatus(filterStatus === "Admitted" ? "All" : "Admitted")}
+                className={`bg-white p-6 rounded-2xl shadow-sm border ${filterStatus === "Admitted" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-gray-100"} flex items-center space-x-4 transition-all hover:translate-y-[-2px] cursor-pointer hover:shadow-md`}
+              >
+                <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Live</p>
+                  <p className="text-2xl font-bold text-emerald-600">{LiveCount}</p>
                 </div>
               </div>
 
@@ -259,7 +296,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {currentEntries.map((app, idx) => (
-                    <tr key={(app.id || app.email) + '-' + idx} className="hover:bg-blue-50/30 transition-colors group">
+                    <tr key={(app.enquiryId || app.email) + '-' + idx} className="hover:bg-blue-50/30 transition-colors group">
                       <td className="px-6 py-5">
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
@@ -273,7 +310,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-5">
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
-                          {app.id}
+                          {app.enquiryId || "N/A"}
                         </span>
                       </td>
                       <td className="px-6 py-5">
@@ -295,7 +332,7 @@ export default function Dashboard() {
                       </td>
 
 
-                      <td className="px-6 py-5 text-sm text-gray-500 font-medium">{app.date}</td>
+                      <td className="px-6 py-5 text-sm text-gray-500 font-medium">{formatDate(app.date)}</td>
 
 
                       <td className="px-6 py-5 text-center">

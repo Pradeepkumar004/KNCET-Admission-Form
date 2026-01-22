@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Nav from "../Nav";
 
-const AcademicScores = () => {
+const AcademicScores = ({ personalData }) => {
     const navigate = useNavigate();
 
     const [scores, setScores] = useState([
@@ -20,6 +19,10 @@ const AcademicScores = () => {
     const [schoolName, setSchoolName] = useState("");
     const [registerNumber, setRegisterNumber] = useState("");
     const [yearOfPassing, setYearOfPassing] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Google Apps Script endpoint
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyksQyXlpXq4IbzeTymBf1Jla1KIMsAGseNIciIJb-BRON5RuCdMYT-b9BdwpOzMoBThQ/exec";
 
     const handleScoreChange = (index, value) => {
         // allow empty string for deletion
@@ -39,37 +42,88 @@ const AcademicScores = () => {
         }
     };
 
-    const handleNavigate = () => {
-        // Generate Enquiry ID
-        let currentEnqId = localStorage.getItem("enqIdCounter");
-        if (!currentEnqId) {
-            currentEnqId = 0;
-        } else {
-            currentEnqId = parseInt(currentEnqId);
+    const handleNavigate = async () => {
+        // Validate required fields
+        if (!schoolName || !registerNumber || !mediumOfStudy || !yearOfPassing) {
+            alert("Please fill in all required fields");
+            return;
         }
-        currentEnqId += 1;
-        localStorage.setItem("enqIdCounter", currentEnqId);
 
-        // Format: KN26EQ0001
-        const paddedEnqCount = String(currentEnqId).padStart(4, '0');
-        const enquiryId = `KN26EQ${paddedEnqCount}`;
+        // Check if all scores are entered
+        const allScoresEntered = scores.every(s => s.obtained && s.obtained.trim() !== "");
+        if (!allScoresEntered) {
+            alert("Please enter marks for all subjects");
+            return;
+        }
 
-        // Save academic scores data to localStorage
-        const academicData = {
-            enquiryId,
-            schoolName,
-            registerNumber,
-            medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
-            yearOfPassing,
-            scores: scores,
-            totalMarks,
-            percentage,
-            cutoff,
-            courseType: "CBSE"
-        };
-        localStorage.setItem('academicScoresData', JSON.stringify(academicData));
+        // Check if personal data is available
+        if (!personalData || !personalData.fullName) {
+            alert("Error: Personal information not found. Please complete Personal Information form first.");
+            return;
+        }
 
-        navigate("/success", { state: { enquiryId } });
+        setIsLoading(true);
+
+        try {
+            console.log("Submitting combined personal and CBSE data...");
+            
+            // Prepare combined data (personal + scores)
+            const combinedData = {
+                action: "submitStudentData",
+                // Personal info fields
+                ...personalData,
+                // Score fields
+                courseType: "CBSE",
+                schoolName,
+                registerNumber,
+                medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
+                yearOfPassing,
+                subject1: scores[0].subject,
+                subject1Marks: scores[0].obtained,
+                subject2: scores[1].subject,
+                subject2Marks: scores[1].obtained,
+                subject3: scores[2].subject,
+                subject3Marks: scores[2].obtained,
+                subject4: scores[3].subject,
+                subject4Marks: scores[3].obtained,
+                subject5: scores[4].subject,
+                subject5Marks: scores[4].obtained,
+                totalMarks,
+                percentage,
+                cutoff,
+                eligibility,
+                date: new Date().toISOString()
+            };
+
+            console.log("Combined data to submit:", combinedData);
+
+            // Send to Google Apps Script
+            const params = new URLSearchParams(combinedData).toString();
+            const url = `${GOOGLE_SCRIPT_URL}?${params}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+            });
+
+            const result = await response.json();
+            console.log("Response from server:", result);
+
+            if (result.success && result.enquiryId) {
+                // Save enquiry ID to localStorage
+                localStorage.setItem('enquiryId', result.enquiryId);
+                localStorage.setItem('studentName', personalData.fullName);
+                
+                setIsLoading(false);
+                navigate("/success", { state: { enquiryId: result.enquiryId } });
+            } else {
+                setIsLoading(false);
+                alert("Error: " + (result.message || "Failed to save data"));
+            }
+        } catch (error) {
+            console.error("Submit error:", error);
+            setIsLoading(false);
+            alert("Error: " + error.message);
+        }
     }
 
     const handleUploadChange = (e) => {
@@ -129,21 +183,30 @@ const AcademicScores = () => {
     const eligibility = calculateEligibility();
     // --- ELIGIBILITY LOGIC END ---
 
-    const [termsAccepted, setTermsAccepted] = useState(true);
+
 
     return (
         <>
-            {/* top */}
-            <Nav />
+            {/* Loading Overlay */}
+            {isLoading && (
+                <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+                    <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+                        <p className="text-2xl font-bold text-blue-900">Submitting Scores...</p>
+                        <p className="text-sm text-gray-600 mt-2">Please wait while we save your scores</p>
+                    </div>
+                </div>
+            )}
 
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
-                <div className="max-w-4xl w-full bg-white shadow p-6 rounded-md">
-
-                    <h2 className=" text-4xl font-semibold text-gray-800">
-                        CBSC Scores
+            <section className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+                <div className="bg-blue-600 px-8 py-5">
+                    <h2 className="text-2xl font-bold text-white flex items-center">
+                        CBSE Scores
                     </h2>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4 mt-5">
+                <div className="p-8 space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
                             <input
@@ -152,6 +215,7 @@ const AcademicScores = () => {
                                 onChange={(e) => setSchoolName(e.target.value)}
                                 placeholder="Enter School Name & Place"
                                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -163,6 +227,7 @@ const AcademicScores = () => {
                                 onChange={(e) => setRegisterNumber(e.target.value)}
                                 placeholder="Enter Register Number"
                                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -186,8 +251,9 @@ const AcademicScores = () => {
                                     type="text"
                                     value={otherMedium}
                                     onChange={(e) => setOtherMedium(e.target.value)}
-                                    placeholder="Please specify medium"
+                                    placeholder="Please Specify Medium"
                                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mt-2"
+                                    style={{ textTransform: 'uppercase' }}
                                     required
                                 />
                             )}
@@ -198,8 +264,9 @@ const AcademicScores = () => {
                                 type="text"
                                 value={yearOfPassing}
                                 onChange={(e) => setYearOfPassing(e.target.value)}
-                                placeholder="Year of Passing"
+                                placeholder="Year Of Passing"
                                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                                style={{ textTransform: 'uppercase' }}
                                 required
                             />
                         </div>
@@ -227,7 +294,7 @@ const AcademicScores = () => {
                                                 max="100"
                                                 value={s.obtained}
                                                 onChange={(e) => handleScoreChange(idx, e.target.value)}
-                                                placeholder="Enter marks"
+                                                placeholder="Enter Marks"
                                                 className="w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-3 "
                                             />
                                         </td>
@@ -274,7 +341,7 @@ const AcademicScores = () => {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Eligibility
+                                 Engineering Eligiblity
                             </label>
                             <input
                                 type="text"
@@ -288,28 +355,16 @@ const AcademicScores = () => {
 
                     {/* Submit */}
                     <div className="mt-6 flex justify-end items-center gap-4">
-                        <label className="flex items-center space-x-2 text-sm text-gray-700">
-                            <input
-                                type="checkbox"
-                                checked={termsAccepted}
-                                onChange={(e) => setTermsAccepted(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <span>I accept the Terms and Conditions</span>
-                        </label>
-
                         <button
                             type="submit"
-                            className={`px-6 py-2 text-white rounded-md transition duration-200 ${termsAccepted ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
-                                }`}
+                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200"
                             onClick={handleNavigate}
-                            disabled={!termsAccepted}
                         >
                             Submit
                         </button>
                     </div>
                 </div>
-            </div>
+            </section>
         </>
     );
 };

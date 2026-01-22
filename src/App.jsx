@@ -26,14 +26,14 @@ function App() {
     <>
       <Routes>
         {/* Public Routes */}
-        <Route path='/login' element={<Login />} />
-        <Route path='/signup' element={<Signup />} />
-        <Route path='/' element={<PersonalInfo />} />
-        <Route path='/HSCInfo' element={<PersonalInfo />} />
-        <Route path='/CBSEInfo' element={<PersonalInfo />} />
-        <Route path='/diplomaInfo' element={<PersonalInfo />} />
-        <Route path='/VocationalInfo' element={<PersonalInfo />} />
-        <Route path='/success' element={<PersonalInfo />} />
+        <Route path='/login' element={<Login/>} />
+        <Route path='/signup' element={<Signup/>} />
+        <Route path='/' element={<PersonalInfo/>} />
+        <Route path='/HSCInfo' element={<AcademicScores/>} />
+        <Route path='/CBSEInfo' element={<CBSEScore/>} />
+        <Route path='/diplomaInfo' element={<DiplomaScores/>} />
+        <Route path='/VocationalInfo' element={<VocationalScores/>} />
+        <Route path='/success' element={<Sucess/>} />
 
         {/* Protected StudentPanel Routes */}
         {/* <Route path='/' element={

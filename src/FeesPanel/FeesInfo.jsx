@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Nav from "../Nav";
 import PDFPreviewModal from '../AdminPanel/PDFPreviewModal';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlKdwAYiJ-Cw_Iy3ntPJrZgj2AhCD7XN8ekA4FYmyxHmIVjtkZZBR-SmDas7mfRaPR5g/exec";
 
 const FeeStructure = () => {
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ const FeeStructure = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [admissionId, setAdmissionId] = useState("");
+  const [scoresData, setScoresData] = useState({}); // Add scoresData state
   const [formData, setFormData] = useState({
     // College Fees
     tuitionFee: 0,
@@ -39,6 +40,96 @@ const FeeStructure = () => {
     hostelTotal: 0,
     overallTotal: 0,
   });
+
+  // Use scoresData from navigation state if available, otherwise fetch from backend
+  useEffect(() => {
+    // Check if scoresData was passed from EditApplicationModal
+    if (location.state?.scoresData && Object.keys(location.state.scoresData).length > 0) {
+      console.log("✅ FeesInfo: Using scoresData from navigation state:", location.state.scoresData);
+      setScoresData(location.state.scoresData);
+      return;
+    }
+
+    // Otherwise fetch from backend
+    const fetchStudentScores = async () => {
+      if (applicationData.enquiryId) {
+        try {
+          console.log("🔍 FeesInfo: Fetching scores for enquiry ID:", applicationData.enquiryId);
+          const url = GOOGLE_SCRIPT_URL + "?action=getScoresData&enquiryId=" + encodeURIComponent(applicationData.enquiryId);
+          
+          const response = await fetch(url);
+          const responseData = await response.json();
+          
+          console.log("📚 FeesInfo: Scores response:", responseData);
+          
+          let rawScores = [];
+          if (responseData.success && Array.isArray(responseData.data)) {
+            rawScores = responseData.data;
+          } else if (Array.isArray(responseData)) {
+            rawScores = responseData;
+          }
+
+          // Get the latest score (first item if sorted by date)
+          const scoresObject = rawScores.length > 0 ? rawScores[0] : {};
+          setScoresData(scoresObject);
+          console.log("✅ FeesInfo: Scores data loaded:", scoresObject);
+        } catch (error) {
+          console.error("❌ FeesInfo: Error fetching scores:", error);
+          setScoresData({});
+        }
+      }
+    };
+
+    fetchStudentScores();
+  }, [applicationData.enquiryId, location.state]);
+
+  // Fetch existing fee data from FeesData sheet
+  useEffect(() => {
+    const fetchFeesData = async () => {
+      if (applicationData.enquiryId) {
+        try {
+          console.log("💰 FeesInfo: Fetching existing fee data for enquiry ID:", applicationData.enquiryId);
+          const url = GOOGLE_SCRIPT_URL + "?action=getFeeData&enquiryId=" + encodeURIComponent(applicationData.enquiryId);
+          
+          const response = await fetch(url);
+          const responseData = await response.json();
+          
+          console.log("💰 FeesInfo: Fee data response:", responseData);
+          
+          if (responseData.success && responseData.data) {
+            const feeRecord = responseData.data;
+            
+            // Populate form with existing fee data
+            const updatedFormData = {
+              tuitionFee: feeRecord.tuitionFee || 0,
+              developmentFee: feeRecord.developmentFee || 0,
+              admissionFee: feeRecord.admissionFee || 0,
+              cautionDeposit: feeRecord.cautionDeposit || 0,
+              optionalFees: feeRecord.optionalFees || 0,
+              scStScholarship: feeRecord.scStScholarship || 0,
+              fgScholarship: feeRecord.fgScholarship || 0,
+              busFee: feeRecord.busFee || 0,
+              messBill: feeRecord.messBill || 0,
+              roomRent: feeRecord.roomRent || 0,
+              laundryCharges: feeRecord.laundryCharges || 0,
+              quota: feeRecord.quota || "Management",
+              status: feeRecord.status || "Pending",
+            };
+            
+            setFormData(updatedFormData);
+            console.log("✅ FeesInfo: Fee data loaded and form populated:", updatedFormData);
+          } else {
+            console.log("⚠️  FeesInfo: No existing fee data found, starting with empty form");
+          }
+        } catch (error) {
+          console.error("❌ FeesInfo: Error fetching fee data:", error);
+          // Continue with empty form if fetch fails
+        }
+      }
+    };
+
+    fetchFeesData();
+  }, [applicationData.enquiryId]);
 
   useEffect(() => {
     const subTotal = Number(formData.tuitionFee) + Number(formData.developmentFee) +
@@ -69,7 +160,17 @@ const FeeStructure = () => {
 
   const handleSubmit = async () => {
     setIsSaving(true);
+    console.log("💾 FeesInfo: Saving fees and status...");
+    console.log("📝 Current status:", applicationData.status || "Pending");
+    console.log("📝 New status:", formData.status);
+    
     try {
+      // Check if status is changing to "Admitted"
+      const statusChangingToAdmitted = formData.status === "Admitted" && (applicationData.status !== "Admitted");
+      if (statusChangingToAdmitted) {
+        console.log("✅ STATUS CHANGED TO ADMITTED - Admission ID will be generated by backend");
+      }
+      
       // Prepare data to save (merge applicationData with formData)
       const dataToSave = {
         ...applicationData,
@@ -95,43 +196,52 @@ const FeeStructure = () => {
         feeOverallTotal: totals.overallTotal,
       };
 
-      // Generate admission ID if status is Admitted
-      if (formData.status === 'Admitted') {
-        let currentCount = localStorage.getItem("appIdCounter");
-        if (!currentCount) {
-          currentCount = 0;
-        } else {
-          currentCount = parseInt(currentCount);
-        }
-        currentCount += 1;
-        localStorage.setItem("appIdCounter", currentCount);
+      console.log("📤 Sending to backend:", {
+        enquiryId: dataToSave.enquiryId,
+        status: dataToSave.status,
+        tuitionFee: dataToSave.tuitionFee,
+        totalFees: dataToSave.feeOverallTotal
+      });
 
-        const paddedCount = String(currentCount).padStart(4, '0');
-        const generatedAdmissionId = `26KNF${paddedCount}`;
-        setAdmissionId(generatedAdmissionId);
-        dataToSave.admissionId = generatedAdmissionId;
-      }
-
-      // Save to backend
+      // Save to backend via GET method with query parameters (avoids CORS preflight)
       const params = new URLSearchParams();
-      params.append("_method", "PUT");
-
+      
+      // Use same method as EditApplicationModal - send via GET with action parameter
       for (const [key, value] of Object.entries(dataToSave)) {
         params.append(key, value);
       }
 
+      console.log("📤 Sending fees data to backend via GET...");
       const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
+      
       const responseData = await response.json();
 
-      if (response.ok && !responseData.error) {
-        // Update local applicationData
+      console.log("📥 Response from backend:", responseData);
+
+      if (responseData.success) {
+        // Update local applicationData with all changes
         Object.assign(applicationData, dataToSave);
+        
+        // If admission ID was generated, capture it
+        if (responseData.admissionId) {
+          console.log("✅ ADMISSION ID GENERATED:", responseData.admissionId);
+          // Update formData with the generated admission ID for display
+          setFormData(prev => ({
+            ...prev,
+            admissionId: responseData.admissionId
+          }));
+          // Also update applicationData to persist it
+          applicationData.admissionId = responseData.admissionId;
+        }
+        
+        console.log("✅ Fees and status saved successfully to Google Sheets");
         setShowSuccessModal(true);
       } else {
-        alert("Failed to save data: " + (responseData.error || "Unknown error"));
+        console.error("❌ Save failed:", responseData.message);
+        alert("Failed to save data: " + (responseData.message || "Unknown error"));
       }
     } catch (error) {
-      console.error("Error saving data:", error);
+      console.error("❌ Error saving data:", error);
       alert("Error saving data: " + error.message);
     } finally {
       setIsSaving(false);
@@ -162,8 +272,13 @@ const FeeStructure = () => {
         <div className="max-w-4xl w-full bg-white shadow-lg rounded-lg overflow-hidden mb-10">
 
           {/* Header */}
-          <div className="bg-[#e91e63] text-white p-4 text-center font-bold text-xl uppercase tracking-wider">
-            Fee Structure
+          <div className="bg-[#e91e63] text-white p-4 flex items-center justify-between">
+            <div className="flex-1 text-center font-bold text-xl uppercase tracking-wider">
+              Fee Structure
+            </div>
+            <div className="bg-white text-[#e91e63] px-4 py-2 rounded-lg font-bold text-sm uppercase border-2 border-white shadow-md">
+              {applicationData.quota || ''}
+            </div>
           </div>
 
           <table className="w-full border-collapse">
@@ -176,23 +291,24 @@ const FeeStructure = () => {
 
             <tbody className="text-sm">
               {/* Section 1: Basic College Fees */}
-              <tr className="bg-green-50 font-semibold">
-                <td colSpan="2" className="p-2 border">1. College Fees</td>
+              <tr className="bg-pink-50 font-semibold">
+                <td colSpan="2" className="p-2 border">College Fees</td>
               </tr>
               {[
                 { label: "Tuition Fee", name: "tuitionFee" },
                 { label: "Development Fee", name: "developmentFee" },
                 { label: "Admission Fee (One Time)", name: "admissionFee" },
                 { label: "Caution Deposit (One Time)", name: "cautionDeposit" },
-                { label: "Optional Fees (Books, ID, Insurance, etc.)", name: "optionalFees" },
+                { label: "Optional Fees (Text Books, Note Books, Lab Manual, Lab Coat, ID, Insurance, etc.)", name: "optionalFees" },
               ].map((item) => (
-                <tr key={item.name} className="bg-green-50">
+                <tr key={item.name} className={formData[item.name] && Number(formData[item.name]) > 0 ? "bg-pink-50" : "bg-green-50"}>
                   <td className="p-3 border">{item.label}</td>
                   <td className="p-3 border">
                     <input
                       type="number"
                       name={item.name}
                       min="0"
+                      value={formData[item.name]}
                       onChange={handleInputChange}
                       className="w-full p-1 border rounded text-center"
                       placeholder="0"
@@ -209,16 +325,16 @@ const FeeStructure = () => {
               <tr className="bg-red-50 font-bold text-red-600">
                 <td colSpan="2" className="p-2 border">(Less -) Scholarships</td>
               </tr>
-              <tr className="bg-red-50">
+              <tr className={formData.scStScholarship && Number(formData.scStScholarship) > 0 ? "bg-pink-50" : "bg-green-50"}>
                 <td className="p-3 border">SC / ST Scholarship (Income &lt; 2.5L)</td>
                 <td className="p-3 border">
-                  <input type="number" name="scStScholarship" min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                  <input type="number" name="scStScholarship" min="0" value={formData.scStScholarship} onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                 </td>
               </tr>
-              <tr className="bg-red-50">
+              <tr className={formData.fgScholarship && Number(formData.fgScholarship) > 0 ? "bg-pink-50" : "bg-green-50"}>
                 <td className="p-3 border">FG - First Graduate Scholarship</td>
                 <td className="p-3 border">
-                  <input type="number" name="fgScholarship" min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                  <input type="number" name="fgScholarship" min="0" value={formData.fgScholarship} onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                 </td>
               </tr>
               <tr className="bg-gray-800 text-white font-bold">
@@ -230,15 +346,15 @@ const FeeStructure = () => {
               <tr className="bg-pink-50 font-bold text-pink-600">
                 <td colSpan="2" className="p-2 border">(Plus +) Transportation</td>
               </tr>
-              <tr className="bg-pink-50">
+              <tr className={formData.busFee && Number(formData.busFee) > 0 ? "bg-pink-50" : "bg-green-50"}>
                 <td className="p-3 border font-semibold italic">Bus Fee (Per Year)</td>
                 <td className="p-3 border">
-                  <input type="number" name="busFee" min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                  <input type="number" name="busFee" min="0" value={formData.busFee} onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                 </td>
               </tr>
 
               {/* Section 4: Hostel Fees */}
-              <tr className="bg-green-50 font-bold text-green-700">
+              <tr className="bg-pink-50 font-bold text-pink-600">
                 <td colSpan="2" className="p-2 border">(Plus +) Boys / Girls Hostel Fee</td>
               </tr>
               {[
@@ -249,7 +365,7 @@ const FeeStructure = () => {
                 <tr key={item.name} className="bg-green-50">
                   <td className="p-3 border">{item.label}</td>
                   <td className="p-3 border">
-                    <input type="number" name={item.name} min="0" onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
+                    <input type="number" name={item.name} min="0" value={formData[item.name]} onChange={handleInputChange} className="w-full p-1 border rounded text-center" placeholder="0" />
                   </td>
                 </tr>
               ))}
@@ -265,6 +381,25 @@ const FeeStructure = () => {
               </tr>
             </tbody>
           </table>
+
+          {/* Admission ID Display - Show when status is Admitted and ID exists */}
+          {formData.status === "Admitted" && (applicationData.admissionId || formData.admissionId) && (
+            <div className="p-4 bg-green-50 border-t-4 border-green-500 border-l-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Admission ID (Registration Number)</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1">
+                    {applicationData.admissionId || formData.admissionId}
+                  </p>
+                </div>
+                <div className="text-green-500">
+                  <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Status Buttons and Submit Section */}
           <div className="p-6 bg-gray-50 border-t border-gray-200">
@@ -340,7 +475,7 @@ const FeeStructure = () => {
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    navigate('/admindashboard');
+                    navigate('/admin');
                   }}
                   className="px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
                 >
@@ -370,9 +505,10 @@ const FeeStructure = () => {
         isOpen={showPDFPreview}
         onClose={() => {
           setShowPDFPreview(false);
-          navigate('/admindashboard');
+          navigate('/admin');
         }}
         studentData={applicationData}
+        scoresData={scoresData}
         studentName={applicationData.fullName}
       />
     </>

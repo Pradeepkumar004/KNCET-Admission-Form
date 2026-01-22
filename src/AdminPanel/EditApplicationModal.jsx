@@ -1,9 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { PDFDocument, StandardFonts, PDFName } from 'pdf-lib';
 import PDFPreviewModal from './PDFPreviewModal';
+import DiplomaScoresEdit from './DiplomaScoresEdit';
 import Nav from "../Nav";
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlKdwAYiJ-Cw_Iy3ntPJrZgj2AhCD7XN8ekA4FYmyxHmIVjtkZZBR-SmDas7mfRaPR5g/exec";
+
+// Format ISO date to readable format
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch (e) {
+    return "N/A";
+  }
+};
 
 export default function EditApplicationModal({
   isOpen,
@@ -13,6 +27,7 @@ export default function EditApplicationModal({
 }) {
   const navigate = useNavigate();
   const [editData, setEditData] = useState(applicationData || {});
+  const [scoresData, setScoresData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
@@ -22,6 +37,35 @@ export default function EditApplicationModal({
   const [busStopSearch, setBusStopSearch] = useState('');
   const [busStopSuggestions, setBusStopSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Helper: keep only latest score row per courseType (or per index fallback)
+  const getLatestScoresByCourse = (rows) => {
+    if (!Array.isArray(rows)) return [];
+
+    const latestByKey = {};
+
+    rows.forEach((row, index) => {
+      const key = row.courseType || `row-${index}`;
+      const existing = latestByKey[key];
+
+      if (!existing) {
+        latestByKey[key] = row;
+        return;
+      }
+
+      const existingTime = new Date(existing.date || 0).getTime();
+      const currentTime = new Date(row.date || 0).getTime();
+
+      // If both dates invalid, prefer the later row in the sheet
+      if (isNaN(existingTime) && isNaN(currentTime)) {
+        latestByKey[key] = row;
+      } else if (currentTime >= existingTime || isNaN(existingTime)) {
+        latestByKey[key] = row;
+      }
+    });
+
+    return Object.values(latestByKey);
+  };
 
   const degree = [
     { id: 1, department: "AD(Artificial and Data Science Engineering)" },
@@ -41,8 +85,82 @@ export default function EditApplicationModal({
       setEditData(applicationData);
       // Set bus stop search to existing value
       setBusStopSearch(applicationData.busStopName || '');
+      
+      // Fetch scores for this student
+      if (applicationData.enquiryId) {
+        fetchStudentScores(applicationData.enquiryId);
+      }
     }
   }, [applicationData]);
+
+  // Auto-calculate academic totals/cutoff/eligibility when subject marks change
+  useEffect(() => {
+    const { totalMarks, percentage, cutoff, eligibility } = computeDerivedScores(scoresData);
+
+    const updates = {};
+    if (totalMarks !== (scoresData.totalMarks ?? 0)) updates.totalMarks = totalMarks;
+    if (percentage !== (scoresData.percentage ?? "")) updates.percentage = percentage;
+    if (cutoff !== (scoresData.cutoff ?? "")) updates.cutoff = cutoff;
+    if (eligibility !== (scoresData.eligibility ?? "")) updates.eligibility = eligibility;
+
+    if (Object.keys(updates).length > 0) {
+      setScoresData((prev) => ({ ...prev, ...updates }));
+    }
+  }, [
+    scoresData.subject1Marks,
+    scoresData.subject2Marks,
+    scoresData.subject3Marks,
+    scoresData.subject4Marks,
+    scoresData.subject5Marks,
+    scoresData.subject6Marks,
+    scoresData.subject1,
+    scoresData.subject2,
+    scoresData.subject3,
+    scoresData.subject4,
+    scoresData.subject5,
+    scoresData.subject6,
+  ]);
+
+  // Fetch scores data from Google Sheet
+  const fetchStudentScores = async (enquiryId) => {
+    try {
+      const url = GOOGLE_SCRIPT_URL + "?action=getScoresData&enquiryId=" + encodeURIComponent(enquiryId);
+      const response = await fetch(url);
+      const responseData = await response.json();
+      
+      let rawScores = [];
+
+      if (responseData.success && Array.isArray(responseData.data)) {
+        rawScores = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        // In case the response is directly an array
+        rawScores = responseData;
+      } else {
+        setScoresData({});
+        return;
+      }
+
+      const latestScores = getLatestScoresByCourse(rawScores);
+      // Convert array to object, using the first (latest) score
+      const scoresObject = latestScores.length > 0 ? latestScores[0] : {};
+      setScoresData(scoresObject);
+    } catch (error) {
+      console.error("Error fetching scores:", error);
+      setScoresData({});
+    }
+  };
+
+  // Format date for display
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "N/A";
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (error) {
+      return "N/A";
+    }
+  };
 
   // Load bus stops data from csv.json
   useEffect(() => {
@@ -67,6 +185,26 @@ export default function EditApplicationModal({
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Hide native number input spinners for a cleaner UI
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      input.no-spin::-webkit-outer-spin-button,
+      input.no-spin::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input.no-spin {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   // Handle bus stop search input
@@ -186,6 +324,37 @@ export default function EditApplicationModal({
     return `${day}-${month}-${year}`;
   };
 
+  // --- Academic scores derived metrics (admin tab) ---
+  const parseMark = (val) => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const computeDerivedScores = (data) => {
+    const subjectIndexes = [1, 2, 3, 4, 5, 6];
+
+    // Consider only subjects that have a name; fallback to all six if none named
+    const availableSubjects = subjectIndexes.filter((i) => data[`subject${i}`]);
+    const subjectsToUse = availableSubjects.length > 0 ? availableSubjects : subjectIndexes;
+
+    const marks = subjectsToUse.map((i) => parseMark(data[`subject${i}Marks`]));
+    const totalMarks = marks.reduce((sum, m) => sum + m, 0);
+
+    const maxPossible = subjectsToUse.length * 100;
+    const percentage = maxPossible > 0 ? ((totalMarks / maxPossible) * 100).toFixed(2) : "";
+
+    // Cutoff: Maths + (Physics/2) + (Chemistry/2)
+    const math = parseMark(data.subject3Marks); // Mathematics
+    const physics = parseMark(data.subject4Marks); // Physics
+    const chemistry = parseMark(data.subject5Marks); // Chemistry
+    const cutoff = math || physics || chemistry ? (math + physics / 2 + chemistry / 2).toFixed(2) : "";
+
+    // Engineering Eligibility: (Maths + Physics + Chemistry) / 3
+    const eligibility = math || physics || chemistry ? ((math + physics + chemistry) / 3).toFixed(2) : "";
+
+    return { totalMarks, percentage, cutoff, eligibility };
+  };
+
   const generateFilledPDF = async () => {
     /*
      */
@@ -197,14 +366,60 @@ export default function EditApplicationModal({
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
       const fields = form.getFields();
+      const defaultFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+      // Resolve actual PDF field names (many are nested like "undefined.name")
+      const resolveFieldName = (fieldName) => {
+        const exact = fields.find((field) => field.getName() === fieldName);
+        if (exact) return exact.getName();
+
+        const suffixMatches = fields.filter((field) => field.getName().endsWith(`.${fieldName}`));
+        if (suffixMatches.length === 1) {
+          return suffixMatches[0].getName();
+        }
+
+        if (suffixMatches.length > 1) {
+          console.warn(
+            `Field '${fieldName}' matched multiple PDF fields: ${suffixMatches
+              .map((field) => field.getName())
+              .join(', ')}`
+          );
+        } else {
+          console.warn(`Field '${fieldName}' not found in the PDF template`);
+        }
+        return null;
+      };
+      
       console.log(`📄 PDF Template loaded: ${fields.length} total fields`);
 
+      const pickValue = (...keys) => {
+        for (const key of keys) {
+          const value = editData?.[key];
+          if (value !== undefined && value !== null && value !== '') {
+            return String(value);
+          }
+        }
+        return '';
+      };
+
+      const studiesHints = [editData?.lastStudies, editData?.typeStudies, editData?.studyType]
+        .map((value) => (typeof value === 'string' ? value.toLowerCase() : ''));
+      const isVocational = studiesHints.some((hint) => hint.includes('vocational'));
+      const isDiploma = studiesHints.some((hint) => hint.includes('diploma'));
+
+      const chooseDiplomaValue = (diplomaKey, ...otherKeys) => {
+        return isDiploma
+          ? pickValue(diplomaKey, ...otherKeys)
+          : pickValue(...otherKeys, diplomaKey);
+      };
+
       // Helper function to set checkbox in a checkbox group (radio-style)
-      // Matches Python approach: find widget with export value and check it
       const setCheckboxInGroup = (fieldName, exportValue) => {
         try {
-          const field = form.getField(fieldName);
+          const actualName = resolveFieldName(fieldName);
+          if (!actualName) return false;
+          
+          const field = form.getField(actualName);
           const acroField = field.acroField;
           const kidsArray = acroField.Kids();
 
@@ -213,45 +428,38 @@ export default function EditApplicationModal({
             return false;
           }
 
-          // pdf-lib returns a PDFArray, we need to access it properly
           const numKids = kidsArray.size();
+          let foundMatch = false;
 
           for (let i = 0; i < numKids; i++) {
             try {
               const widget = kidsArray.lookup(i);
-
               if (!widget) continue;
 
-              // Get appearance dictionary
               const ap = widget.lookup(PDFName.of('AP'));
-
               if (ap) {
-                // Get normal appearance
                 const n = ap.lookup(PDFName.of('N'));
-
                 if (n && n.entries) {
-                  // Check if this widget has the export value we want
                   for (const [key, val] of n.entries()) {
                     const keyStr = key.decodeText ? key.decodeText() : key.toString().replace(/^\//, '');
-
-                    // Match export value (like Python: if export_value == target_value)
                     if (keyStr === exportValue && keyStr !== 'Off') {
-                      // Set this widget to checked (widget.field_value = True)
                       widget.set(PDFName.of('AS'), PDFName.of(exportValue));
                       console.log(`✓ ${fieldName} = ${exportValue}`);
-                      return true;
+                      foundMatch = true;
+                      break;
                     }
                   }
                 }
               }
             } catch (widgetError) {
-              // Skip this widget if there's an error
               continue;
             }
           }
 
-          console.warn(`⚠ Export value '${exportValue}' not found in ${fieldName}`);
-          return false;
+          if (!foundMatch) {
+            console.warn(`⚠ Export value '${exportValue}' not found in ${fieldName}`);
+          }
+          return foundMatch;
         } catch (error) {
           console.warn(`✗ Could not set ${fieldName}:`, error.message);
           return false;
@@ -261,28 +469,36 @@ export default function EditApplicationModal({
       // Helper function to safely set text field value
       const setTextField = (fieldName, value) => {
         try {
-          const field = form.getTextField(fieldName);
-          if (field && value !== undefined && value !== null) {
+          const actualName = resolveFieldName(fieldName);
+          if (!actualName) return;
+          
+          const field = form.getTextField(actualName);
+          if (field && value !== undefined && value !== null && value !== '') {
             field.setText(String(value));
+            console.log(`✓ ${fieldName} = ${value}`);
           }
         } catch (error) {
-          console.warn(`Could not set text field ${fieldName}:`, error.message);
+          console.warn(`✗ Could not set text field '${fieldName}':`, error.message);
         }
       };
 
       // Helper function to set checkbox
       const setCheckbox = (fieldName, checked) => {
         try {
-          const field = form.getCheckBox(fieldName);
+          const actualName = resolveFieldName(fieldName);
+          if (!actualName) return;
+          
+          const field = form.getCheckBox(actualName);
           if (field) {
             if (checked) {
               field.check();
+              console.log(`✓ ${fieldName} checked`);
             } else {
               field.uncheck();
             }
           }
         } catch (error) {
-          console.warn(`Could not set checkbox ${fieldName}:`, error.message);
+          console.warn(`✗ Could not set checkbox '${fieldName}':`, error.message);
         }
       };
 
@@ -290,7 +506,7 @@ export default function EditApplicationModal({
       console.log('📝 Filling PDF form fields...\n');
 
       // Basic Information
-      setTextField('adminssion-id', editData.id || '');
+      setTextField('admission-id', editData.id || '');
       setTextField('date', formatDateForPDF(new Date()));
       setTextField('name', editData.fullName || '');
       setTextField('date-of-birth', formatDateForPDF(editData.dob));
@@ -313,7 +529,7 @@ export default function EditApplicationModal({
         'EEE': 'eee-dept',
         'IT': 'it-dept',
         'Mechanical': 'mech-dept',
-        'Agriculture': 'agri-dept',
+        'Agriculture': 'age-dept',
         // Full format (with descriptions)
         'AD(Artificial and Data Science Engineering)': 'ad-dept',
         'BME(Bio Medical Engineering)': 'bme-dept',
@@ -324,7 +540,7 @@ export default function EditApplicationModal({
         'EEE(Electrical and Electronics Engineering)': 'eee-dept',
         'IT(Information Technology)': 'it-dept',
         'MECH(Mechanical Engineering)': 'mech-dept',
-        'AGRI(Agricultural Engineering)': 'agri-dept'
+        'AGRI(Agricultural Engineering)': 'age-dept'
       };
 
       console.log('📋 Branch Preferences:', {
@@ -369,7 +585,7 @@ export default function EditApplicationModal({
       // Community - checkbox group (like Python: check 'bc' for BC community)
       const communityMap = {
         'OC': 'oc',
-        'BC': 'bc',
+        'BC': 'BC',
         'BCM': 'bcm',
         'MBC': 'mbc',
         'SC': 'sc',
@@ -383,7 +599,7 @@ export default function EditApplicationModal({
 
       // Seat Type - checkbox group (government/management)
       if (editData.quota === 'Government') {
-        setCheckboxInGroup('seat-type', 'government');
+        setCheckboxInGroup('seat-type', 'governement');
       } else if (editData.quota === 'Management') {
         setCheckboxInGroup('seat-type', 'management');
       }
@@ -412,6 +628,11 @@ export default function EditApplicationModal({
       if (editData.accommodation && studentTypeMap[editData.accommodation]) {
         setCheckboxInGroup('student-type', studentTypeMap[editData.accommodation]);
       }
+      
+      // Day Scholar checkbox
+      if (editData.accommodation === 'DayScholar') {
+        setCheckbox('student-type.days-scholar', true);
+      }
 
       // Travel type (college-bus or out-bus)
       if (editData.travelType === 'CollegeBus') {
@@ -420,7 +641,7 @@ export default function EditApplicationModal({
         setCheckboxInGroup('student-type', 'out-bus');
       }
 
-      setTextField('bus-stop', editData.busStop || '');
+      setTextField('bus-stop', editData.busStopName || editData.busStop || '');
 
       // Address Details
       setTextField('address-line-1', editData.address1 || '');
@@ -435,34 +656,154 @@ export default function EditApplicationModal({
       setTextField('contact-No-(mother)', editData.motherContact || '');
       setTextField('contact-No-(student)', editData.studentContact || '');
 
-      // Educational Details
-      setTextField('name-and-place-of-college', editData.schoolName || '');
-      setTextField('register-no', editData.registrationNo || '');
-      setTextField('type-studies', editData.lastStudies || '');
-      setTextField('medium-of-study', editData.mediumOfStudy || 'English');
-      setTextField('year-of-passing', editData.yearOfPassing || '');
+      // === ACADEMIC DETAILS MAPPING ===
+      console.log('📚 Mapping academic details from scoresData...\n');
+      
+      // Educational institution details (use scoresData if available, otherwise fallback to editData)
+      setTextField(
+        'name-and-place-of-college',
+        scoresData?.schoolName || chooseDiplomaValue('diplomaInstitution', 'schoolName', 'vocationalSchoolName', 'nameAndPlaceOfCollege')
+      );
+      setTextField(
+        'register-no',
+        scoresData?.registerNumber || chooseDiplomaValue('diplomaRegisterNo', 'registrationNo', 'registerNumber', 'registerNo')
+      );
+      setTextField('type-studies', scoresData?.courseType || pickValue('lastStudies', 'typeStudies'));
+      setTextField(
+        'medium-of-study',
+        scoresData?.medium || (chooseDiplomaValue('diplomaProgram', 'mediumOfStudy', 'vocationalMediumOfStudy', 'medium') || 'English')
+      );
+      setTextField(
+        'year-of-passing',
+        scoresData?.yearOfPassing || chooseDiplomaValue('diplomaCompletionYear', 'yearOfPassing', 'vocationalYearOfPassing', 'passingYear')
+      );
 
-      // HSC/SSLC Marks - Map all subject marks
-      setTextField('tamil', editData.tamilMarks || '');
-      setTextField('english', editData.englishMarks || '');
-      setTextField('physics', editData.physicsMarks || '');
-      setTextField('chemistry', editData.chemistryMarks || '');
-      setTextField('maths', editData.mathsMarks || '');
-      setTextField('computer-science/biology', editData.csOrBioMarks || '');
-      // Note: total-mark and mark-percentage fields don't exist in PDF template
-      // setTextField('total-mark', editData.totalMarks || '');
-      setTextField('cutoff', editData.cutoffMarks || '');
-      // setTextField('mark-percentage', editData.percentage || editData.sslcMarks || '');
+      // SSLC Marks
+      setTextField('sslc-mark', editData.sslcMarks || '');
+      
+      // Calculate SSLC Percentage (divide by 5 and format to 2 decimal points)
+      const sslcPercentage = editData.sslcMarks ? (parseFloat(editData.sslcMarks) / 5).toFixed(2) : '';
+      setTextField('sslc-percentage', sslcPercentage);
+
+      // HSC/CBSE Marks - Use scoresData if available, otherwise fallback to editData
+      const chooseMarks = (vocationalKey, academicKey) => {
+        return isVocational
+          ? pickValue(vocationalKey, academicKey)
+          : pickValue(academicKey, vocationalKey);
+      };
+
+      // Map subject marks from scoresData object
+      const subjectFieldMappings = [
+        ['tamil', scoresData?.subject1Marks || chooseMarks('vocationalTamilMarks', 'tamilMarks')],
+        ['english', scoresData?.subject2Marks || chooseMarks('vocationalEnglishMarks', 'englishMarks')],
+        ['physics', scoresData?.subject3Marks || chooseMarks('vocationalSubject3Marks', 'physicsMarks')],
+        ['chemistry', scoresData?.subject4Marks || chooseMarks('vocationalSubject4Marks', 'chemistryMarks')],
+        ['maths', scoresData?.subject5Marks || chooseMarks('vocationalSubject5Marks', 'mathsMarks')],
+        ['computer-science/biology', scoresData?.subject6Marks || chooseMarks('vocationalSubject6Marks', 'csOrBioMarks')]
+      ];
+
+      subjectFieldMappings.forEach(([field, value]) => {
+        setTextField(field, value);
+      });
+      
+      // HSC Total and Percentage (use scoresData first, then fallback to vocational/other totals)
+      const hscTotalValue = scoresData?.totalMarks || chooseMarks('vocationalTotalMarks', 'hscTotalMarks');
+      const hscPercentageValue = scoresData?.percentage || chooseMarks('vocationalPercentage', 'hscPercentage');
+      const cutoffValue = scoresData?.cutoff || chooseMarks('vocationalCutoff', 'cutoffMarks');
+      setTextField('hsc-total-mark', hscTotalValue);
+      setTextField('hsc-mark-percentage', hscPercentageValue);
+      setTextField('cutoff', cutoffValue);
+
+      // Diploma marks (conditional - only for diploma students)
+      if (editData.lastStudies === 'Diploma') {
+        setTextField('diploma-1-to-5-sem', editData.fifthSemMarks || '');
+        setTextField('diploma-1-to-6-sem', editData.sixthSemMarks || '');
+      }
+
+      // Engineering eligibility/cutoff
+      setTextField('engineering-eligibility', scoresData?.eligibility || cutoffValue);
 
       // Reference Information
       setTextField('know-about-this-college', editData.knowAbout || '');
       setTextField('reference-name', editData.referenceName || '');
-      setTextField('reference-contact', editData.referenceContact || '');
+      setTextField('reference-contact-no', editData.referenceContact || '');
+
+      // === FEE STRUCTURE MAPPING ===
+      console.log('💰 Mapping fee structure...\n');
+
+      if (editData.quota === 'Government') {
+        // Government seat fees
+        setTextField('government-tuition-fee', editData.tuitionFee || '');
+        setTextField('government-development-fee', editData.developmentFee || '');
+        setTextField('government-admission-fee', editData.admissionFee || '');
+        setTextField('government-caution deposit-fee', editData.cautionDeposit || '');
+        setTextField('government-optional-fee', editData.optionalFees || '');
+        
+        // Scholarships
+        setTextField('government-sc/st-scholorship', editData.scStScholarship || '');
+        setTextField('government-first-graduate-fee', editData.fgScholarship || '');
+        
+        // Transportation & Hostel
+        setTextField('government-bus-fee', editData.busFee || '');
+        setTextField('government-mess-bill', editData.messBill || '');
+        setTextField('government-room-rent', editData.roomRent || '');
+        setTextField('government-laundry-fee', editData.laundryCharges || '');
+        
+        // Totals
+        setTextField('government-tuition-total-fee', editData.feeSubTotal || '');
+        setTextField('government-college-total-fee', editData.feeCollegeTotal || '');
+        setTextField('government-total-hostel-fee', editData.feeHostelTotal || '');
+        setTextField('government-overall-fee', editData.feeOverallTotal || '');
+        
+        console.log('✓ Government fee structure mapped');
+        
+      } else if (editData.quota === 'Management') {
+        // Management seat fees
+        setTextField('management-tuition-fee', editData.tuitionFee || '');
+        setTextField('management-development-fee', editData.developmentFee || '');
+        setTextField('management-admission-fee', editData.admissionFee || '');
+        setTextField('management-caution deposit-fee', editData.cautionDeposit || '');
+        setTextField('management-optional-fee', editData.optionalFees || '');
+        
+        // Scholarships
+        setTextField('management-sc/st-scholorship', editData.scStScholarship || '');
+        setTextField('management-first-graduate-fee', editData.fgScholarship || '');
+        
+        // Transportation & Hostel
+        setTextField('management-bus-fee', editData.busFee || '');
+        setTextField('management-mess-bill', editData.messBill || '');
+        setTextField('management-room-rent', editData.roomRent || '');
+        setTextField('management-laundry-fee', editData.laundryCharges || '');
+        
+        // Totals
+        setTextField('management-tuition-total-fee', editData.feeSubTotal || '');
+        setTextField('management-college-total-fee', editData.feeCollegeTotal || '');
+        setTextField('management-total-hostel-fee', editData.feeHostelTotal || '');
+        setTextField('management-overall-fee', editData.feeOverallTotal || '');
+        
+        console.log('✓ Management fee structure mapped');
+      }
+
+      // Force pdf-lib to regenerate widget appearances so text is visible in viewers
+      form.updateFieldAppearances(defaultFont);
 
       console.log('\n✅ PDF form filling completed');
+      
+      // CRITICAL: Set the NeedAppearances flag to ensure PDF viewers generate appearances
+      // This is the key to making text fields visible
+      const acroForm = pdfDoc.catalog.lookup(PDFName.of('AcroForm'));
+      if (acroForm) {
+        acroForm.set(PDFName.of('NeedAppearances'), pdfDoc.context.obj(true));
+        console.log('✅ NeedAppearances flag set');
+      }
 
       // Save the PDF
-      const pdfBytes = await pdfDoc.save();
+      console.log('💾 Saving PDF...');
+      const pdfBytes = await pdfDoc.save({
+        useObjectStreams: false,
+        addDefaultPage: false
+      });
+      console.log('✅ PDF saved successfully');
       return pdfBytes;
 
     } catch (error) {
@@ -472,15 +813,25 @@ export default function EditApplicationModal({
   };
 
   const handlePreviewPDF = () => {
+    console.log('🔍 Preview PDF clicked - Current scoresData:', scoresData);
+    console.log('📋 Academic fields being passed to PDF:', {
+      schoolName: scoresData?.schoolName,
+      registerNumber: scoresData?.registerNumber,
+      medium: scoresData?.medium,
+      yearOfPassing: scoresData?.yearOfPassing,
+      courseType: scoresData?.courseType
+    });
     setShowPDFPreview(true);
   };
 
   const handleSave = async () => {
     setIsSaving(true);
+    
     try {
+      // Step 1: Save personal info using GET method with updatePersonalInfo action
       const params = new URLSearchParams();
-      params.append("_method", "PUT");
-
+      params.append("action", "updatePersonalInfo");
+      
       for (const [key, value] of Object.entries(editData)) {
         params.append(key, value);
       }
@@ -488,31 +839,107 @@ export default function EditApplicationModal({
       const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
       const responseData = await response.json();
 
-      if (response.ok && !responseData.error) {
-        onUpdateSuccess(editData);
+      // Check if the response indicates success
+      if (!responseData.success) {
+        alert("Failed to update personal info: " + (responseData.message || "Unknown error"));
+        setIsSaving(false);
+        return;
+      }
 
-        // Navigate to score pages based on lastStudies
-        const lastStudies = editData.lastStudies;
-        if (lastStudies === 'HSC') {
-          navigate('/admin/academic-score', { state: { applicationData: editData } });
-        } else if (lastStudies === 'HSC Vocational') {
-          navigate('/admin/vocational-score', { state: { applicationData: editData } });
-        } else if (lastStudies === 'CBSE') {
-          navigate('/admin/cbse-score', { state: { applicationData: editData } });
-        } else if (lastStudies === 'Diploma') {
-          navigate('/admin/diploma-score', { state: { applicationData: editData } });
-        } else if (lastStudies === 'Dropout') {
-          navigate('/feesInfo', { state: { applicationData: editData } });
-        } else {
-          // For other cases, just close and stay on dashboard
-          onClose();
+      // Update editData with server-returned admission ID (if generated)
+      let updatedEditData = { ...editData };
+      if (responseData.admissionId) {
+        updatedEditData.admissionId = responseData.admissionId;
+        setEditData(prev => ({
+          ...prev,
+          admissionId: responseData.admissionId
+        }));
+        console.log("✅ Admission ID from server: " + responseData.admissionId);
+      }
+
+      // Step 2: Save scores if they were edited (only when data exists)
+      if (Object.keys(scoresData).length > 0) {
+        const scoreParams = new URLSearchParams();
+        scoreParams.append("action", "updateScores");
+        scoreParams.append("enquiryId", editData.enquiryId);
+        
+        // Add all score fields
+        for (const [key, value] of Object.entries(scoresData)) {
+          scoreParams.append(key, value);
         }
+        
+        const scoresResponse = await fetch(GOOGLE_SCRIPT_URL + "?" + scoreParams.toString());
+        const scoresResult = await scoresResponse.json();
+        
+        if (scoresResult.success) {
+          console.log("✅ Scores saved successfully for enquiry ID: " + editData.enquiryId);
+        } else {
+          console.error("❌ Failed to save scores:", scoresResult.message);
+        }
+      }
+
+      // Step 3: Save fees data via GET method if fees fields exist (avoids CORS)
+      const feeFields = ["tuitionFee", "developmentFee", "admissionFee", "cautionDeposit", 
+                         "optionalFees", "scStScholarship", "fgScholarship", "busFee", 
+                         "messBill", "roomRent", "laundryCharges", "feeSubTotal", 
+                         "feeCollegeTotal", "feeHostelTotal", "feeOverallTotal"];
+      
+      const feesData = {};
+      let hasFeeData = false;
+      for (const feeField of feeFields) {
+        if (editData[feeField] !== undefined && editData[feeField] !== null && editData[feeField] !== '') {
+          feesData[feeField] = editData[feeField];
+          hasFeeData = true;
+        }
+      }
+      
+      if (hasFeeData) {
+        console.log("💾 Saving fees data:", feesData);
+        feesData.enquiryId = editData.enquiryId;
+        feesData.admissionId = updatedEditData.admissionId || editData.admissionId || '';
+        feesData.fullName = editData.fullName || '';
+        feesData.quota = editData.quota || '';
+        feesData.status = editData.status || 'Pending'; // Include status with fees
+        
+        const feeParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(feesData)) {
+          feeParams.append(key, value);
+        }
+        
+        console.log("📤 Sending fees to backend with query params (GET method)");
+        
+        const feesResponse = await fetch(GOOGLE_SCRIPT_URL + "?" + feeParams.toString());
+        
+        const feesResult = await feesResponse.json();
+        if (feesResult.success) {
+          console.log("✅ Fees data saved successfully");
+          // Update editData with fees information from response if available
+          if (feesResult.updatedData) {
+            updatedEditData = { ...updatedEditData, ...feesResult.updatedData };
+          }
+        } else {
+          console.error("❌ Failed to save fees data:", feesResult.message);
+          alert("Note: Personal info and scores saved but fees data save may have failed. Please try again.");
+        }
+      }
+
+      if (responseData.success) {
+        console.log("✅ Save successful! Calling onUpdateSuccess callback...");
+        console.log("📊 Updated data being sent to dashboard:", updatedEditData);
+        onUpdateSuccess(updatedEditData);
+
+        // Navigate to Fees Info page after successful save
+        console.log('✅ Navigating to Fees Info page');
+        console.log('📊 Passing scoresData to FeesInfo:', scoresData);
+        navigate('/feesInfo', { state: { applicationData: updatedEditData, scoresData: scoresData } });
+        onClose(); // Close the modal after navigation
       } else {
-        alert("Failed to update data: " + (responseData.error || "Unknown error"));
+        console.error('❌ Update failed:', responseData);
+        alert("Failed to update information. Please try again.");
       }
     } catch (error) {
-      console.error("Error saving data:", error);
-      alert("Error saving data: " + error.message);
+      console.error("❌ Error during save:", error);
+      alert("An error occurred while saving: " + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -566,28 +993,55 @@ export default function EditApplicationModal({
             </button>
           </div>
 
-          {/* Modal Body */}
-          <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
-            {/* Row 1: Full Name & Email */}
+          {/* Single Scrollable Content */}
+          <div className="max-h-[75vh] overflow-y-auto">
+          {/* Personal Info Section */}
+          <div className="bg-blue-50 px-8 py-4 border-b border-blue-100">
+            <h3 className="text-lg font-bold text-blue-900">Personal Information</h3>
+          </div>
+          <div className="p-8 space-y-8">
+            {/* Row 1: Seat Type & Admission Type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
-                <input
-                  type="text"
-                  value={editData.fullName || ""}
-                  onChange={(e) => handleInputChange("fullName", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                />
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Seat Type</label>
+                <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-3">
+                  <div className="flex space-x-6">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="quota"
+                        value="Government"
+                        checked={editData.quota === "Government"}
+                        onChange={(e) => handleInputChange("quota", e.target.value)}
+                        className="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="font-medium">Government</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="quota"
+                        value="Management"
+                        checked={editData.quota === "Management"}
+                        onChange={(e) => handleInputChange("quota", e.target.value)}
+                        className="w-5 h-5 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="font-medium">Management</span>
+                    </label>
+                  </div>
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={editData.email || ""}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Admission Type</label>
+                <select
+                  value={editData.entry || ""}
+                  onChange={(e) => handleInputChange("entry", e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                  disabled
-                />
+                >
+                  <option value="" disabled>Select Entry Type</option>
+                  <option value="I Year">I Year</option>
+                  <option value="Lateral Entry">Lateral Entry</option>
+                </select>
               </div>
             </div>
 
@@ -596,18 +1050,16 @@ export default function EditApplicationModal({
             {/* Row 2: DOB & Gender/Accommodation */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
   
-  {/* LEFT COLUMN WRAPPER: Holds DOB and Enquiry ID vertically */}
+  {/* LEFT COLUMN WRAPPER: Holds Full Name and Enquiry ID vertically */}
   <div className="space-y-8">
     
-    {/* 1. Date of Birth Field */}
+    {/* 1. Full Name Field */}
     <div>
-      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-        Date of Birth
-      </label>
+      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
       <input
-        type="date"
-        value={formatDateForInput(editData.dob)}
-        onChange={(e) => handleInputChange("dob", e.target.value)}
+        type="text"
+        value={editData.fullName || ""}
+        onChange={(e) => handleInputChange("fullName", e.target.value)}
         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
       />
     </div>
@@ -622,6 +1074,59 @@ export default function EditApplicationModal({
         value={editData.enquiryId || "ENQ-PENDING"} /* Replace with your actual data variable */
         readOnly
         className="w-full px-4 py-3 bg-gray-200 text-gray-500 border border-gray-300 rounded-lg cursor-not-allowed outline-none select-none"
+      />
+    </div>
+
+    {/* 3. Admission ID Field (Auto-generated when status is Admitted) */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        Admission ID
+      </label>
+      <input
+        type="text"
+        value={editData.admissionId || "Not Generated"}
+        readOnly
+        className={`w-full px-4 py-3 border border-gray-300 rounded-lg cursor-not-allowed outline-none select-none ${
+          editData.admissionId
+            ? "bg-green-100 text-green-700 font-semibold border-green-300"
+            : "bg-gray-200 text-gray-500"
+        }`}
+      />
+    </div>
+
+    {/* 4. Status Field (Admin can change this) */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        Application Status
+      </label>
+      <select
+        value={editData.status || "Pending"}
+        onChange={(e) => handleInputChange("status", e.target.value)}
+        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
+      >
+        <option value="Pending">Pending</option>
+        <option value="Admitted">Admitted</option>
+        <option value="cancel">Cancel</option>
+      </select>
+    </div>
+
+    {/* 5. Submission Date Field (Admin can edit this) */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+        Submission Date
+      </label>
+      <input
+        type="date"
+        value={editData.date ? editData.date.split('T')[0] : ""}
+        onChange={(e) => {
+          // Convert date to ISO string format with time
+          const dateValue = e.target.value;
+          if (dateValue) {
+            const isoDate = new Date(dateValue).toISOString();
+            handleInputChange("date", isoDate);
+          }
+        }}
+        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
       />
     </div>
 
@@ -734,7 +1239,7 @@ export default function EditApplicationModal({
                       value={busStopSearch}
                       onChange={handleBusStopSearch}
                       onFocus={() => busStopSearch.length >= 4 && setShowSuggestions(true)}
-                      placeholder="Type at least 4 characters to search..."
+                      placeholder="Type at least 3 characters to search..."
                       className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                     />
                     {/* Suggestions Dropdown */}
@@ -866,48 +1371,28 @@ export default function EditApplicationModal({
 
             <hr className="border-gray-100" />
 
-            {/* Row 4: Quota & Entry */}
+            {/* Row 4: DOB & Entry */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Seat Type</label>
-                <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-3">
-                  <div className="flex space-x-6">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="quota"
-                        value="Government"
-                        checked={editData.quota === "Government"}
-                        onChange={(e) => handleInputChange("quota", e.target.value)}
-                        className="w-5 h-5 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="font-medium">Government</span>
-                    </label>
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="quota"
-                        value="Management"
-                        checked={editData.quota === "Management"}
-                        onChange={(e) => handleInputChange("quota", e.target.value)}
-                        className="w-5 h-5 text-green-600 focus:ring-green-500"
-                      />
-                      <span className="font-medium">Management</span>
-                    </label>
-                  </div>
-                </div>
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  value={formatDateForInput(editData.dob)}
+                  onChange={(e) => handleInputChange("dob", e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Admission Type</label>
-                <select
-                  value={editData.entry || ""}
-                  onChange={(e) => handleInputChange("entry", e.target.value)}
+                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={editData.email || ""}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                >
-                  <option value="">Select Entry Type</option>
-                  <option value="I Year">I Year</option>
-                  <option value="Lateral Entry">Lateral Entry</option>
-                </select>
+                  disabled
+                />
               </div>
             </div>
 
@@ -1279,6 +1764,221 @@ export default function EditApplicationModal({
             </div>
           </div>
 
+          {/* Academic Scores Section */}
+          {editData.lastStudies !== 'Diploma' && (
+          <>
+          <div className="bg-green-50 px-8 py-4 border-b border-green-100">
+            <h3 className="text-lg font-bold text-green-900">Academic Scores</h3>
+          </div>
+          <div className="p-8 space-y-8">
+            {Object.keys(scoresData).length > 0 ? (
+              <div className="space-y-6">
+                <div className="border border-gray-200 rounded-xl p-6 space-y-6 bg-gray-50">
+                  {/* Score Header */}
+                  <div className="bg-white p-4 rounded-lg border border-gray-100">
+                    <h4 className="text-lg font-bold text-gray-800">
+                      {scoresData.courseType}
+                    </h4>
+                    {/* <p className="text-sm text-gray-500 mt-1">
+                      Submitted: {formatDateDisplay(scoresData.date)}
+                    </p> */}
+                  </div>
+
+                  {/* Course Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">School/Board Name</label>
+                      <input
+                        type="text"
+                        value={scoresData.schoolName || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, schoolName: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Register Number</label>
+                      <input
+                        type="text"
+                        value={scoresData.registerNumber || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, registerNumber: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Medium of Study</label>
+                      <select
+                        value={["English", "Tamil"].includes(scoresData.medium) ? scoresData.medium : scoresData.medium ? "Other" : ""}
+                        onChange={(e) => {
+                          const nextVal = e.target.value;
+                          // If Other is selected, keep current custom value or empty to let user type
+                          setScoresData(prev => ({ ...prev, medium: nextVal === "Other" ? (prev.medium && !["English", "Tamil"].includes(prev.medium) ? prev.medium : "") : nextVal }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Medium</option>
+                        <option value="English">English</option>
+                        <option value="Tamil">Tamil</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {((scoresData.medium && !["English", "Tamil"].includes(scoresData.medium)) || (scoresData.medium === "" && scoresData.medium !== null && scoresData.medium !== undefined)) && (
+                        <input
+                          type="text"
+                          value={scoresData.medium || ""}
+                          onChange={(e) => {
+                            setScoresData(prev => ({ ...prev, medium: e.target.value }));
+                          }}
+                          placeholder="Enter medium"
+                          className="mt-2 w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Year of Passing</label>
+                      <input
+                        type="text"
+                        value={scoresData.yearOfPassing || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, yearOfPassing: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subject Marks */}
+                  <div className="bg-white p-4 rounded-lg">
+                    <h5 className="font-bold text-gray-800 mb-4">Subject Marks</h5>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border border-gray-300 text-sm">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Subject</th>
+                            <th className="border border-gray-300 px-4 py-2 text-center font-semibold">Maximum Marks</th>
+                            <th className="border border-gray-300 px-4 py-2 text-center font-semibold">Marks Obtained</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(editData.lastStudies === 'CBSE' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6]).map((num) => (
+                            <tr key={num} className={num % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                              <td className="border border-gray-300 px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={scoresData[`subject${num}`] || ""}
+                                  onChange={(e) => {
+                                    setScoresData(prev => ({ ...prev, [`subject${num}`]: e.target.value }));
+                                  }}
+                                  className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                  placeholder={`Subject ${num}`}
+                                />
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2 text-center text-gray-800">100</td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                <input
+                                  type="number"
+                                  value={scoresData[`subject${num}Marks`] || ""}
+                                  onChange={(e) => {
+                                    setScoresData(prev => ({ ...prev, [`subject${num}Marks`]: e.target.value }));
+                                  }}
+                                  className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-center no-spin"
+                                  placeholder="Enter marks"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Overall Marks & Eligibility */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Total Marks</label>
+                      <input
+                        type="number"
+                        value={scoresData.totalMarks || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, totalMarks: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none no-spin"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Percentage</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={scoresData.percentage || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, percentage: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none no-spin"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">CutOff</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={scoresData.cutoff || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, cutoff: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none no-spin"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Engineering Eligibility</label>
+                      <input
+                        type="number"
+                        value={scoresData.eligibility || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, eligibility: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none no-spin"
+                        
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-gray-500 font-medium">No score data available for this student</p>
+                <p className="text-gray-400 text-sm mt-1">Score will appear once student submits academic information</p>
+              </div>
+            )}
+          </div>
+          </>
+          )}
+
+          {/* Diploma Scores Section */}
+          {editData.lastStudies === 'Diploma' && (
+          <>
+          <div className="bg-purple-50 px-8 py-4 border-b border-purple-100">
+            <h3 className="text-lg font-bold text-purple-900">Diploma Scores</h3>
+          </div>
+          <DiplomaScoresEdit 
+            applicationData={editData}
+            scoresData={scoresData}
+            onSave={(updatedData) => {
+              setEditData(updatedData);
+              if (onUpdateSuccess) {
+                onUpdateSuccess(updatedData);
+              }
+            }}
+          />
+          </>
+          )}
+          </div>
+
           {/* Modal Footer */}
           <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-8 py-4 flex items-center justify-end space-x-3 rounded-b-2xl">
             <button
@@ -1368,6 +2068,7 @@ export default function EditApplicationModal({
         isOpen={showPDFPreview}
         onClose={() => setShowPDFPreview(false)}
         studentData={editData}
+        scoresData={scoresData}
         studentName={editData.fullName}
       />
     </>

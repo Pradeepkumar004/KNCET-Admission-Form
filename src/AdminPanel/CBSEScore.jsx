@@ -28,7 +28,7 @@ const AcademicScores = () => {
     const [registrationNo, setRegistrationNo] = useState(applicationData.registrationNo || '');
     const [isSaving, setIsSaving] = useState(false);
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0xrX0EZirHB0kCkS3imlILIsRU7cxYRKRtawt-uw0Whr-t5g4Kys9UC8mo-UFvJb8PQ/exec";
 
     // const handleScoreChange = (index, value) => {
     //     const newScores = [...scores];

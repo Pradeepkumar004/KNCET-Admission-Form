@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/kongunadulogo.png"
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0xrX0EZirHB0kCkS3imlILIsRU7cxYRKRtawt-uw0Whr-t5g4Kys9UC8mo-UFvJb8PQ/exec";
 
-const AdminVocationalScores = () => {
+const AdminVocationalScores = ({ personalData }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const applicationData = location.state?.applicationData || {};
+    const applicationData = personalData || location.state?.applicationData || {};
 
     const [scores, setScores] = useState([
         { subject: "Tamil", max: 100, obtained: "" },
@@ -52,50 +52,93 @@ const AdminVocationalScores = () => {
     };
 
     const handleNavigate = async () => {
+    const handleNavigate = async () => {
+        // Validate required fields
+        if (!schoolName || !registerNumber || !mediumOfStudy || !yearOfPassing) {
+            alert("Please fill in all required fields");
+            return;
+        }
+
+        // Check if all scores are entered
+        const allScoresEntered = scores.every(s => s.obtained && s.obtained.trim() !== "");
+        if (!allScoresEntered) {
+            alert("Please enter marks for all subjects");
+            return;
+        }
+
+        // Check if personal data is available
+        if (!personalData || !personalData.fullName) {
+            alert("Error: Personal information not found. Please complete Personal Information form first.");
+            return;
+        }
+
         setIsSaving(true);
+
         try {
-            // Prepare updated data with vocational scores
-            const updatedData = {
-                ...applicationData,
-                mediumOfStudy: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
+            console.log("Submitting combined personal and vocational data...");
+            
+            // Prepare combined data (personal + scores)
+            const combinedData = {
+                action: "submitStudentData",
+                // Personal info fields
+                ...personalData,
+                // Score fields
+                courseType: "HSC Vocational",
                 schoolName,
                 registerNumber,
+                medium: mediumOfStudy === "Other" ? otherMedium : mediumOfStudy,
                 yearOfPassing,
-                vocationalTamilMarks: scores[0].obtained,
-                vocationalEnglishMarks: scores[1].obtained,
-                vocationalSubject3Marks: scores[2].obtained,
-                vocationalSubject4Marks: scores[3].obtained,
-                vocationalSubject5Marks: scores[4].obtained,
-                vocationalSubject6Marks: scores[5].obtained,
-                vocationalTotalMarks: totalMarks,
-                vocationalPercentage: percentage,
-                vocationalCutoff: cutoff
+                subject1: scores[0].subject,
+                subject1Marks: scores[0].obtained,
+                subject2: scores[1].subject,
+                subject2Marks: scores[1].obtained,
+                subject3: scores[2].subject,
+                subject3Marks: scores[2].obtained,
+                subject4: scores[3].subject,
+                subject4Marks: scores[3].obtained,
+                subject5: scores[4].subject,
+                subject5Marks: scores[4].obtained,
+                subject6: scores[5].subject,
+                subject6Marks: scores[5].obtained,
+                totalMarks,
+                percentage,
+                cutoff,
+                eligibility,
+                date: new Date().toISOString()
             };
 
-            const params = new URLSearchParams();
-            params.append("_method", "PUT");
+            console.log("Combined data to submit:", combinedData);
 
-            for (const [key, value] of Object.entries(updatedData)) {
-                params.append(key, value);
-            }
+            // Send to Google Apps Script
+            const params = new URLSearchParams(combinedData).toString();
+            const url = `${GOOGLE_SCRIPT_URL}?${params}`;
 
-            const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
-            const responseData = await response.json();
+            const response = await fetch(url, {
+                method: 'GET',
+            });
 
-            if (response.ok && !responseData.error) {
-                // Update local applicationData
-                Object.assign(applicationData, updatedData);
-                // Navigate directly to FeesInfo
-                navigate('/feesInfo', { state: { applicationData: updatedData } });
+            const result = await response.json();
+            console.log("Response from server:", result);
+
+            if (result.success && result.enquiryId) {
+                localStorage.setItem('enquiryId', result.enquiryId);
+                localStorage.setItem('studentName', personalData.fullName);
+                
+                setIsSaving(false);
+                setShowSuccessModal(true);
+                setTimeout(() => {
+                    navigate("/success", { state: { enquiryId: result.enquiryId } });
+                }, 2000);
             } else {
-                alert("Failed to save vocational scores: " + (responseData.error || "Unknown error"));
+                setIsSaving(false);
+                alert("Error: " + (result.message || "Failed to save data"));
             }
         } catch (error) {
-            console.error("Error saving vocational scores:", error);
-            alert("Error saving vocational scores: " + error.message);
-        } finally {
+            console.error("Submit error:", error);
             setIsSaving(false);
+            alert("Error: " + error.message);
         }
+    }
     }
 
     const handleUploadChange = (e) => {

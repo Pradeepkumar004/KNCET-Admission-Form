@@ -5,6 +5,7 @@ export default function PDFPreviewModal({
   isOpen, 
   onClose, 
   studentData,
+  scoresData,
   studentName 
 }) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -23,6 +24,21 @@ export default function PDFPreviewModal({
   // Auto-generate PDF when modal opens
   useEffect(() => {
     if (isOpen && studentData) {
+      console.log('🎯 PDFPreviewModal opened');
+      console.log('📦 Props received:', {
+        hasStudentData: !!studentData,
+        hasScoresData: !!scoresData,
+        scoresDataKeys: scoresData ? Object.keys(scoresData) : [],
+        studentName: studentName || studentData?.fullName
+      });
+      
+      // Verify critical academic fields
+      if (scoresData && Object.keys(scoresData).length > 0) {
+        console.log('✅ Academic data is available for PDF mapping');
+      } else {
+        console.warn('⚠️ No academic scores data available - will use fallback values');
+      }
+      
       handleGeneratePreview();
     }
   }, [isOpen, studentData]);
@@ -43,6 +59,20 @@ export default function PDFPreviewModal({
    */
   const generateFilledPDF = async () => {
     try {
+      // ✅ VERIFICATION: Log received data
+      console.log('📊 Received Student Data:', studentData);
+      console.log('📚 Received Scores Data:', scoresData);
+      console.log('🔍 Academic Fields Check:', {
+        schoolName: scoresData?.schoolName,
+        registerNumber: scoresData?.registerNumber,
+        medium: scoresData?.medium,
+        yearOfPassing: scoresData?.yearOfPassing,
+        courseType: scoresData?.courseType,
+        totalMarks: scoresData?.totalMarks,
+        percentage: scoresData?.percentage,
+        cutoff: scoresData?.cutoff
+      });
+
       // Load the PDF template
       const templatePath = '/src/assets/admission-form-template.pdf';
       const existingPdfBytes = await fetch(templatePath).then(res => res.arrayBuffer());
@@ -197,9 +227,9 @@ export default function PDFPreviewModal({
       console.log('📝 Filling PDF form fields...\n');
       
       // Basic Information
-      setTextField('admission-id', studentData.id || '');
+      setTextField('admission-id', studentData.admissionId ||studentData.id || '');
       setTextField('date', formatDateForPDF(new Date()));
-      setTextField('name', studentData.fullName || '');
+      setTextField('name', studentData.fullName || ''); 
       setTextField('date-of-birth', formatDateForPDF(studentData.dob));
       
       // Gender - checkbox group
@@ -229,17 +259,14 @@ export default function PDFPreviewModal({
         'EEE(Electrical and Electronics Engineering)': 'eee-dept',
         'IT(Information Technology)': 'it-dept',
         'MECH(Mechanical Engineering)': 'mech-dept',
-        'AGRI(Agricultural Engineering)': 'agri-dept'
+        'AGRI(Agricultural Engineering)': 'age-dept'
       };
       
-      const preferences = [studentData.preference1, studentData.preference2, studentData.preference3];
-      
-      preferences.forEach((pref) => {
-        if (pref && deptMapping[pref]) {
-          const fieldName = deptMapping[pref];
-          setCheckbox(fieldName, true);
-        }
-      });
+      // Only check the first preference in PDF
+      if (studentData.preference1 && deptMapping[studentData.preference1]) {
+        const fieldName = deptMapping[studentData.preference1];
+        setCheckbox(fieldName, true);
+      }
       
       // Branch awarded
       setTextField('branch-awarded', studentData.branchAwarded  || '');
@@ -315,7 +342,8 @@ export default function PDFPreviewModal({
         setCheckboxInGroup('student-type', 'out-bus');
       }
 
-      setTextField('bus-stop', studentData.busStop || '');
+      // Bus details
+      setTextField('bus-stop', studentData.busStopName || '');
 
       // Address Details
       setTextField('address-line-1', studentData.address1 || '');
@@ -331,23 +359,27 @@ export default function PDFPreviewModal({
       setTextField('contact-No-(student)', studentData.studentContact || '');
 
      
-      setTextField(
-        'name-and-place-of-college',
-        chooseDiplomaValue('diplomaInstitution', 'schoolName', 'vocationalSchoolName', 'nameAndPlaceOfCollege')
-      );
-      setTextField(
-        'register-no',
-        chooseDiplomaValue('diplomaRegisterNo', 'registrationNo', 'registerNumber', 'registerNo')
-      );
-      setTextField('type-studies', pickValue('lastStudies', 'typeStudies'));
-      setTextField(
-        'medium-of-study',
-        (chooseDiplomaValue('diplomaProgram', 'mediumOfStudy', 'vocationalMediumOfStudy', 'medium') || 'English')
-      );
-      setTextField(
-        'year-of-passing',
-        chooseDiplomaValue('diplomaCompletionYear', 'yearOfPassing', 'vocationalYearOfPassing', 'passingYear')
-      );
+      // ====== ACADEMIC INFORMATION SECTION ======
+      console.log('\n📖 Mapping Academic Information...');
+      
+      // Academic information - prioritize scoresData from Academic tab
+      const academicSchoolName = scoresData?.schoolName || chooseDiplomaValue('diplomaInstitution', 'schoolName', 'vocationalSchoolName', 'nameAndPlaceOfCollege');
+      const academicRegisterNo = scoresData?.registerNumber || chooseDiplomaValue('diplomaRegisterNo', 'registrationNo', 'registerNumber', 'registerNo');
+      const academicCourseType = scoresData?.courseType || pickValue('lastStudies', 'typeStudies');
+      const academicMedium = scoresData?.medium || (chooseDiplomaValue('diplomaProgram', 'mediumOfStudy', 'vocationalMediumOfStudy', 'medium') || 'English');
+      const academicYearOfPassing = scoresData?.yearOfPassing || chooseDiplomaValue('diplomaCompletionYear', 'yearOfPassing', 'vocationalYearOfPassing', 'passingYear');
+      
+      console.log('✓ School Name:', academicSchoolName);
+      console.log('✓ Register Number:', academicRegisterNo);
+      console.log('✓ Course Type:', academicCourseType);
+      console.log('✓ Medium:', academicMedium);
+      console.log('✓ Year of Passing:', academicYearOfPassing);
+      
+      setTextField('name-and-place-of-college', academicSchoolName);
+      setTextField('register-no', academicRegisterNo);
+      setTextField('type-studies', academicCourseType);
+      setTextField('medium-of-study', academicMedium);
+      setTextField('year-of-passing', academicYearOfPassing);
 
       // SSLC Marks
       setTextField('sslc-mark', studentData.sslcMarks || '');
@@ -356,33 +388,119 @@ export default function PDFPreviewModal({
       const sslcPercentage = studentData.sslcMarks ? (parseFloat(studentData.sslcMarks) / 5).toFixed(2) : '';
       setTextField('sslc-percentage', sslcPercentage);
 
-      // HSC/CBSE Marks
+      // HSC/CBSE Marks - Use scoresData if available, otherwise fallback to studentData
       const chooseMarks = (vocationalKey, academicKey) => {
         return isVocational
           ? pickValue(vocationalKey, academicKey)
           : pickValue(academicKey, vocationalKey);
       };
 
-      const subjectFieldMappings = [
-        ['tamil', chooseMarks('vocationalTamilMarks', 'tamilMarks')],
-        ['english', chooseMarks('vocationalEnglishMarks', 'englishMarks')],
-        ['physics', chooseMarks('vocationalSubject3Marks', 'physicsMarks')],
-        ['chemistry', chooseMarks('vocationalSubject4Marks', 'chemistryMarks')],
-        ['maths', chooseMarks('vocationalSubject5Marks', 'mathsMarks')],
-        ['computer-science/biology', chooseMarks('vocationalSubject6Marks', 'csOrBioMarks')]
-      ];
-
-      subjectFieldMappings.forEach(([field, value]) => {
-        setTextField(field, value);
-      });
+      // Map subject marks from scoresData object
+      console.log('\n📝 Mapping Subject Marks...');
       
-      // HSC Total and Percentage (fallbacks to vocational totals when available)
-      const hscTotalValue = chooseMarks('vocationalTotalMarks', 'hscTotalMarks');
-      const hscPercentageValue = chooseMarks('vocationalPercentage', 'hscPercentage');
-      const cutoffValue = chooseMarks('vocationalCutoff', 'cutoffMarks');
+      // Dynamic subject mapping based on actual subject names from scoresData
+      const subjectPdfFieldMap = {
+        'tamil': 'tamil',
+        'english': 'english',
+        'mathematics': 'maths',
+        'maths': 'maths',
+        'physics': 'physics',
+        'chemistry': 'chemistry',
+        'computer science': 'computer-science/biology',
+        'computer science / biology': 'computer-science/biology',
+        'biology': 'computer-science/biology',
+        'cs': 'computer-science/biology',
+        'bio': 'computer-science/biology'
+      };
+      
+      // Map subjects dynamically
+      if (scoresData) {
+        for (let i = 1; i <= 6; i++) {
+          const subjectName = scoresData[`subject${i}`];
+          const subjectMarks = scoresData[`subject${i}Marks`];
+          
+          if (subjectName && subjectMarks !== undefined && subjectMarks !== null) {
+            const normalizedSubject = subjectName.toLowerCase().trim();
+            const pdfField = subjectPdfFieldMap[normalizedSubject];
+            
+            if (pdfField) {
+              console.log(`  • ${pdfField}: ${subjectMarks} (from ${subjectName})`);
+              setTextField(pdfField, subjectMarks);
+            } else {
+              console.warn(`  ⚠ No PDF field mapping for subject: ${subjectName}`);
+            }
+          }
+        }
+      } else {
+        // Fallback to old mapping if scoresData not available
+        const subjectFieldMappings = [
+          ['tamil', chooseMarks('vocationalTamilMarks', 'tamilMarks')],
+          ['english', chooseMarks('vocationalEnglishMarks', 'englishMarks')],
+          ['physics', chooseMarks('vocationalSubject3Marks', 'physicsMarks')],
+          ['chemistry', chooseMarks('vocationalSubject4Marks', 'chemistryMarks')],
+          ['maths', chooseMarks('vocationalSubject5Marks', 'mathsMarks')],
+          ['computer-science/biology', chooseMarks('vocationalSubject6Marks', 'csOrBioMarks')]
+        ];
+
+        subjectFieldMappings.forEach(([field, value]) => {
+          console.log(`  • ${field}: ${value || 'N/A'}`);
+          setTextField(field, value);
+        });
+      }
+      
+      // HSC Total and Percentage (use scoresData first, then fallback to vocational/other totals)
+      const hscTotalValue = scoresData?.totalMarks || chooseMarks('vocationalTotalMarks', 'hscTotalMarks');
+      const hscPercentageValue = scoresData?.percentage || chooseMarks('vocationalPercentage', 'hscPercentage');
+      const cutoffValue = scoresData?.cutoff || chooseMarks('vocationalCutoff', 'cutoffMarks');
+      
+      console.log('\n📊 Academic Summary:');
+      console.log('  • Total Marks:', hscTotalValue);
+      console.log('  • Percentage:', hscPercentageValue);
+      console.log('  • Cutoff:', cutoffValue);
+      
       setTextField('hsc-total-mark', hscTotalValue);
       setTextField('hsc-mark-percentage', hscPercentageValue);
       setTextField('cutoff', cutoffValue);
+
+      // Calculate and set Physics-Chemistry Cutoff and Maths Cutoff
+      let physicsMarks = 0;
+      let chemistryMarks = 0;
+      let mathsMarks = 0;
+
+      if (scoresData) {
+        // Extract marks from scoresData by finding physics, chemistry, and maths subjects
+        for (let i = 1; i <= 6; i++) {
+          const subjectName = scoresData[`subject${i}`];
+          const subjectMarks = parseFloat(scoresData[`subject${i}Marks`]) || 0;
+          
+          if (subjectName) {
+            const normalizedSubject = subjectName.toLowerCase().trim();
+            if (normalizedSubject === 'physics') {
+              physicsMarks = subjectMarks;
+            } else if (normalizedSubject === 'chemistry') {
+              chemistryMarks = subjectMarks;
+            } else if (normalizedSubject === 'mathematics' || normalizedSubject === 'maths') {
+              mathsMarks = subjectMarks;
+            }
+          }
+        }
+      } else {
+        // Fallback to old data structure
+        physicsMarks = parseFloat(chooseMarks('vocationalSubject3Marks', 'physicsMarks')) || 0;
+        chemistryMarks = parseFloat(chooseMarks('vocationalSubject4Marks', 'chemistryMarks')) || 0;
+        mathsMarks = parseFloat(chooseMarks('vocationalSubject5Marks', 'mathsMarks')) || 0;
+      }
+
+      // Calculate Physics-Chemistry Cutoff: (Physics + Chemistry) / 2
+      const physicsChemistryCutoff = ((physicsMarks + chemistryMarks) / 2).toFixed(2);
+      
+      console.log('  • Physics Marks:', physicsMarks);
+      console.log('  • Chemistry Marks:', chemistryMarks);
+      console.log('  • Physics-Chemistry Cutoff:', physicsChemistryCutoff);
+      console.log('  • Maths Marks:', mathsMarks);
+      
+      setTextField('physics-chemistry-cutoff', physicsChemistryCutoff);
+      setTextField('maths-cutoff', mathsMarks.toString());
 
       // Reference Information
       setTextField('know-about-this-college', studentData.knowAbout || '');
@@ -395,8 +513,10 @@ export default function PDFPreviewModal({
         setTextField('diploma-1-to-6-sem', studentData.sixthSemMarks || '');
       }
 
-      // Engineering eligibility/cutoff
-      setTextField('engineering-eligibility', cutoffValue);
+      // Engineering eligibility - prioritize scoresData from Academic tab
+      const engineeringEligibility = scoresData?.eligibility || cutoffValue;
+      console.log('  • Engineering Eligibility:', engineeringEligibility);
+      setTextField('engineering-eligibility', engineeringEligibility);
 
       // === FEE STRUCTURE MAPPING ===
       console.log('💰 Mapping fee structure...\n');
@@ -512,7 +632,7 @@ export default function PDFPreviewModal({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${studentName || studentData.fullName || 'student'}_admission_form.pdf`;
+      link.download = `${studentData.admissionId || studentData.id || 'TEMP'}_${studentData.fullName || studentName || 'student'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

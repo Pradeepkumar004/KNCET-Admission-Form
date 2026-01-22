@@ -2,11 +2,16 @@ import React from "react";
 import { useState } from "react";
 import logo from "../assets/kongunadulogo.png"
 import { useNavigate } from "react-router-dom";
+import AcademicScores from "./AcadamicScore";
+import CBSEScore from "./CBSEScore";
+import DiplomaScores from "./DiplomaScores";
+import VocationalScores from "./Vocational";
 
 const PersonalInfo = () => {
 
-  const [photo, setPhoto] = useState(null);
+
   const [isLoading, setIsLoading] = useState(false);
+  const [showAcademicSection, setShowAcademicSection] = useState(false);
   
   const [formData, setFormData] = useState({
     preference1: '',
@@ -39,6 +44,7 @@ const PersonalInfo = () => {
     sslcMarks: '',
     schoolName: '',
     govtSchool: '',
+    schoolType: '',
     lastStudies: '',
     // Add more fields as needed
   });
@@ -47,19 +53,19 @@ const PersonalInfo = () => {
 
 
   const degree = [
-    { id: 1, department: "AD(Artificial and Data Science Engineering)" },
-    { id: 2, department: "AGRI(Agricultural Engineering)" },
-    { id: 3, department: "BME(Bio-Medical Engineering)" },
-    { id: 4, department: "CSE(Computer Science and Engineering)" },
-    { id: 5, department: "CIVIL(Civil Engineering)" },
-    { id: 6, department: "ECE(Electronics and Communication Engineering )" },
-    { id: 7, department: "EEE(Electrical and Electronics Engineering)" },
-    { id: 8, department: "IT(Information Technology)" },
-    { id: 9, department: "MECH(Mechanical Engineering)" },
+    { id: 1, department: "AD(Artificial and Data Science Engineering)", short: "AD" },
+    { id: 2, department: "AGRI(Agricultural Engineering)", short: "AGRI" },
+    { id: 3, department: "BME(Bio-Medical Engineering)", short: "BME" },
+    { id: 4, department: "CSE(Computer Science and Engineering)", short: "CSE" },
+    { id: 5, department: "CIVIL(Civil Engineering)", short: "CIVIL" },
+    { id: 6, department: "ECE(Electronics and Communication Engineering )", short: "ECE" },
+    { id: 7, department: "EEE(Electrical and Electronics Engineering)", short: "EEE" },
+    { id: 8, department: "IT(Information Technology)", short: "IT" },
+    { id: 9, department: "MECH(Mechanical Engineering)", short: "MECH" },
   ]
 
   const Address = [
-    { label: "Address Line 1 (Door no, Village Name / Street Name)", name: "address1", placeholder: "Enter Door no, Village Name / Street Name", full: true },
+    { label: "Address Line 1 (Door no, Village Name / Street Name)", name: "address1", placeholder: "Enter Door No, Village Name / Street Name", full: true },
     { label: "Address Line 2 (Panchayat / Town)", name: "address2", placeholder: "Enter Panchayat / Town", full: true },
     { label: "Taluk", name: "taluk", placeholder: "Enter Taluk" },
     { label: "District", name: "district", placeholder: "Enter District" },
@@ -90,13 +96,14 @@ const PersonalInfo = () => {
 
 
   const handleNavigate = () => {
-    if (formData.lastStudies === 'Diploma') {
-      navigate("/diplomaInfo");
-    } else if (formData.lastStudies === 'CBSE') {
-      navigate("/CBSEInfo");
-    } else {
-      navigate("/HSCInfo");
-    }
+    // Scroll to academic section instead of navigating
+    setShowAcademicSection(true);
+    setTimeout(() => {
+      const academicSection = document.getElementById('academic-scores-section');
+      if (academicSection) {
+        academicSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   }
 
 
@@ -106,6 +113,18 @@ const PersonalInfo = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+    
+    // Show academic section when Last Studies is selected
+    if (name === 'lastStudies' && value && value !== 'Dropout') {
+      setShowAcademicSection(true);
+      setTimeout(() => {
+        const academicSection = document.getElementById('academic-scores-section');
+        if (academicSection) {
+          academicSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+
+    }
   };
 
   // const handleGenderChange = (e) => {
@@ -119,87 +138,115 @@ const PersonalInfo = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Google Apps Script endpoint
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlFhbNdjWUj4YHTNsqStTY-fGnMe6k3YhZ2Y9-aXGr_Ds9S_T54qi9HqKhb4uSUPu2/exec";
+  // ==================== HELPER FUNCTION ====================
+  // Convert full department name to short form (e.g., "CSE(Computer Science...)" → "CSE")
+  const getShortForm = (departmentFullName) => {
+    const department = degree.find(d => d.department === departmentFullName);
+    return department ? department.short : departmentFullName;
+  };
 
+  // ==================== FORM SUBMISSION HANDLER ====================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate required fields
+    // VALIDATION 1: Check if Seat Type (Quota) is selected
     if (!formData.quota) {
-      alert('Please select a Quota (Management or Government)');
+      const quotaSection = document.getElementById('seat-type-section');
+      if (quotaSection) {
+        quotaSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => alert('Please select a Seat Type (Management or Government)'), 300);
+      } else {
+        alert('Please select a Seat Type (Management or Government)');
+      }
       return;
     }
 
-    if (!formData.email) {
-      alert('Please enter your email address');
+    // VALIDATION 2: Check if Admission Type (Entry) is selected
+    if (!formData.entry) {
+      const entrySection = document.getElementById('admission-type-section');
+      if (entrySection) {
+        entrySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => alert('Please select an Admission Type (I Year or Lateral Entry)'), 300);
+      } else {
+        alert('Please select an Admission Type (I Year or Lateral Entry)');
+      }
       return;
     }
 
+    // VALIDATION 3: Check for any invalid fields (HTML5 validation)
+    const firstInvalidField = e.target.querySelector(':invalid');
+    if (firstInvalidField) {
+      firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalidField.focus();
+      return;
+    }
+
+    // VALIDATION 4: Check if Full Name is entered
     if (!formData.fullName) {
       alert('Please enter your full name');
       return;
     }
 
-    setIsLoading(true); // Show loading screen
+    // ==================== DATA PREPARATION ====================
+    // Create cleaned data object with only necessary fields
+    // Department preferences are converted to short forms for API
+    const personalData = {
+      // Department Preferences (Short Forms Only)
+      preference1: getShortForm(formData.preference1),
+      preference2: formData.preference2 ? getShortForm(formData.preference2) : '',
+      preference3: formData.preference3 ? getShortForm(formData.preference3) : '',
 
-    try {
-      console.log("Submitting form data...");
+      // Admission Details
+      quota: formData.quota,
+      entry: formData.entry,
 
-      // Prepare data in the same format as stored in the sheet
-      const submissionData = {
-        ...formData,
-        date: new Date().toISOString()
-      };
+      // Personal Details
+      fullName: formData.fullName,
+      email: formData.email,
+      dob: formData.dob,
+      gender: formData.gender,
 
-      console.log("Data to submit:", submissionData);
+      // Accommodation Details
+      accommodation: formData.accommodation,
+      roomType: formData.roomType,
+      travelType: formData.travelType,
 
-      // Use GET method for adding new data (Apps Script requires GET for browser compatibility)
-      const params = new URLSearchParams(submissionData).toString();
-      const url = `${GOOGLE_SCRIPT_URL}?${params}`;
+      // Parent Information
+      fatherName: formData.fatherName,
+      fatherOccupation: formData.fatherOccupation,
 
-      console.log("Sending request to:", url.split('?')[0]);
+      // Social Information
+      community: formData.community,
+      caste: formData.caste,
 
-      const response = await fetch(url, {
-        method: 'GET',
-      });
+      // Financial Information
+      annualIncome: formData.annualIncome,
+      firstGrad: formData.firstGrad,
 
-      console.log("Response status:", response.status);
+      // Address Information
+      address1: formData.address1,
+      address2: formData.address2,
+      taluk: formData.taluk,
+      district: formData.district,
+      state: formData.state,
+      pincode: formData.pincode,
 
-      const result = await response.json();
+      // Contact Information
+      fatherContact: formData.fatherContact,
+      motherContact: formData.motherContact,
+      studentContact: formData.studentContact,
 
-      console.log("Response data:", result);
+      // Educational Details
+      sslcMarks: formData.sslcMarks,
+      govtSchool: formData.govtSchool,
+      schoolType: formData.schoolType,
+      lastStudies: formData.lastStudies,
+    };
 
-      if (result.success) {
-        // Save form data to localStorage for PDF generation
-        localStorage.setItem('submittedFormData', JSON.stringify(submissionData));
-
-        // Keep loading screen visible for a moment before navigation
-        setTimeout(() => {
-          setIsLoading(false);
-          // alert('Data sent successfully!');
-          handleNavigate();
-        }, 1000);
-      } else if (result.error) {
-        setIsLoading(false);
-        alert('Error: ' + result.error);
-      } else {
-        setIsLoading(false);
-        alert('Failed to send data: ' + (result.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error("Submit error:", error);
-      setIsLoading(false);
-      alert('Error: ' + error.message);
-    }
-  };
-
-
-  const handlePhotoUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setPhoto(URL.createObjectURL(file));
-    }
+    // ==================== DATA STORAGE ====================
+    // Save cleaned personal data to localStorage for academic section
+    localStorage.setItem('submittedFormData', JSON.stringify(personalData));
+    console.log("✓ Personal info saved to localStorage with short form department values", personalData);
   };
 
 
@@ -252,7 +299,7 @@ const PersonalInfo = () => {
           </div>
 
           <form className="p-8 space-y-10" onSubmit={handleSubmit}>
-            {/* Top Grid: Degree, Quota, Photo */}
+            {/* Top Grid: Degree, Quota */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
               {/* Left Column: Degree Preferences */}
               <div>
@@ -283,13 +330,13 @@ const PersonalInfo = () => {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Seat Type</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4" id="seat-type-section">
                     <label className="flex items-center justify-center border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                      <input type="radio" name="quota" value="Management" checked={formData.quota === "Management"} onChange={handleChange} className="hidden" required />
+                      <input type="radio" name="quota" value="MQ" checked={formData.quota === "MQ"} onChange={handleChange} className="hidden" required />
                       <span className="font-medium">Management</span>
                     </label>
                     <label className="flex items-center justify-center border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                      <input type="radio" name="quota" value="Government" checked={formData.quota === "Government"} onChange={handleChange} className="hidden" />
+                      <input type="radio" name="quota" value="GQ" checked={formData.quota === "GQ"} onChange={handleChange} className="hidden" required />
                       <span className="font-medium">Government</span>
                     </label>
                   </div>
@@ -297,13 +344,13 @@ const PersonalInfo = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Admission Type</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4" id="admission-type-section">
                     <label className="flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
                       <input type="radio" name="entry" value="I Year" checked={formData.entry === "I Year"} onChange={handleChange} className="hidden" required />
                       <span className="font-medium">I Year</span>
                     </label>
                     <label className="flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                      <input type="radio" name="entry" value="Lateral Entry" checked={formData.entry === "Lateral Entry"} onChange={handleChange} className="hidden" />
+                      <input type="radio" name="entry" value="Lateral Entry" checked={formData.entry === "Lateral Entry"} onChange={handleChange} className="hidden" required />
                       <span className="font-medium">Lateral Entry</span>
                     </label>
                   </div>
@@ -313,30 +360,17 @@ const PersonalInfo = () => {
 
             <hr className="border-gray-100" />
 
-            {/* Middle Grid: Admission, Name, Email, DOB */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              {/* <div className="col-span-full">
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Admission Type</label>
-                <div className="flex space-x-4 max-w-md">
-                  <label className="flex-1 flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                    <input type="radio" name="entry" value="I Year" checked={formData.entry === "I Year"} onChange={handleChange} className="hidden" />
-                    <span className="font-medium">I Year</span>
-                  </label>
-                  <label className="flex-1 flex items-center justify-center border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600">
-                    <input type="radio" name="entry" value="Lateral Entry" checked={formData.entry === "Lateral Entry"} onChange={handleChange} className="hidden" />
-                    <span className="font-medium">Lateral Entry</span>
-                  </label>
-                </div>
-              </div> */}
+             
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Full Name</label>
-                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Student's Full Name" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Student's Full Name" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" style={{ textTransform: 'uppercase' }} required />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Email Address <span className="text-[10px]">(OPTIONAL)</span></label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
+                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" style={{ textTransform: 'uppercase' }}  />
               </div>
 
               <div>
@@ -349,11 +383,11 @@ const PersonalInfo = () => {
                 <div className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-4">
                   <div className="flex space-x-6">
                     <label className="flex items-center space-x-2 cursor-pointer">
-                      <input type="radio" name="gender" value="Male" checked={formData.gender === "Male"} onChange={handleGenderChange} className="w-5 h-5 text-blue-600 focus:ring-blue-500" required />
+                      <input type="radio" name="gender" value="MALE" checked={formData.gender === "MALE"} onChange={handleGenderChange} className="w-5 h-5 text-blue-600 focus:ring-blue-500" required />
                       <span className="font-medium">Male</span>
                     </label>
                     <label className="flex items-center space-x-2 cursor-pointer">
-                      <input type="radio" name="gender" value="Female" checked={formData.gender === "Female"} onChange={handleGenderChange} className="w-5 h-5 text-pink-600 focus:ring-pink-500" />
+                      <input type="radio" name="gender" value="FEMALE" checked={formData.gender === "FEMALE"} onChange={handleGenderChange} className="w-5 h-5 text-pink-600 focus:ring-pink-500" />
                       <span className="font-medium">Female</span>
                     </label>
                   </div>
@@ -363,33 +397,33 @@ const PersonalInfo = () => {
                       <label className="block text-xs font-bold text-grey-400 uppercase">Student Type</label>
                       <div className="grid grid-cols-2 gap-4">
                         <label className="flex items-center space-x-2 p-2 rounded-lg border border-gray-200 hover:border-blue-400 cursor-pointer">
-                          <input type="radio" name="accommodation" value={formData.gender === "Male" ? "BoysHostel" : "GirlsHostel"} checked={formData.accommodation === (formData.gender === "Male" ? "BoysHostel" : "GirlsHostel")} onChange={handleGenderChange} required />
-                          <span className="text-sm">Hostel</span>
+                          <input type="radio" name="accommodation" value={formData.gender === "MALE" ? "BOYSHOSTEL" : "GIRLSHOSTEL"} checked={formData.accommodation === (formData.gender === "MALE" ? "BOYSHOSTEL" : "GIRLSHOSTEL")} onChange={handleGenderChange} required />
+                          <span className="text-sm">{formData.gender === "MALE" ? "Boys Hostel" : "Girls Hostel"}</span>
                         </label>
                         <label className="flex items-center space-x-2 p-2 rounded-lg border border-gray-200 hover:border-blue-400 cursor-pointer">
-                          <input type="radio" name="accommodation" value="DayScholar" checked={formData.accommodation === "DayScholar"} onChange={handleGenderChange} />
+                          <input type="radio" name="accommodation" value="DAYSCHOLAR" checked={formData.accommodation === "DAYSCHOLAR"} onChange={handleGenderChange} />
                           <span className="text-sm">Day Scholar</span>
                         </label>
                       </div>
 
                       {/* Room / Travel Details Sub-options */}
-                      {(formData.accommodation === "BoysHostel" || formData.accommodation === "GirlsHostel") && (
+                      {(formData.accommodation === "BOYSHOSTEL" || formData.accommodation === "GIRLSHOSTEL") && (
                         <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
                           <select name="roomType" value={formData.roomType} onChange={handleGenderChange} className="w-full text-sm bg-transparent border-none outline-none focus:ring-0" required>
-                            <option value="">Select Room Type</option>
-                            <option value="Normal4">Normal (4 Members)</option>
-                            <option value="Attach3">Attached Bath (3 Members)</option>
-                            <option value="AC2">AC + Attached (2 Members)</option>
+                            <option value="" disabled>Select Room Type</option>
+                            <option value={formData.accommodation === "BOYSHOSTEL" ? "BOYS HOSTEL (N)" : "GIRLS HOSTEL (N)"}>Normal (4 Members)</option>
+                            <option value={formData.accommodation === "BOYSHOSTEL" ? "BOYS HOSTEL (A)" : "GIRLS HOSTEL (A)"}>Attached Bath (3 Members)</option>
+                            <option value={formData.accommodation === "BOYSHOSTEL" ? "BOYS HOSTEL (AC)" : "GIRLS HOSTEL (AC)"}>AC + Attached (2 Members)</option>
                           </select>
                         </div>
                       )}
 
-                      {formData.accommodation === "DayScholar" && (
+                      {formData.accommodation === "DAYSCHOLAR" && (
                         <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
                           <select name="travelType" value={formData.travelType} onChange={handleGenderChange} className="w-full text-sm bg-transparent border-none outline-none focus:ring-0" required>
-                            <option value="">Select Travel Type</option>
-                            <option value="CollegeBus">College Bus</option>
-                            <option value="OutBus">Own/Outside Travel</option>
+                            <option value="" disabled>Select Travel Type</option>
+                            <option value="COLLEGEBUS">College Bus</option>
+                            <option value="OUTBUS">Own/Outside Travel</option>
                           </select>
                         </div>
                       )}
@@ -405,12 +439,12 @@ const PersonalInfo = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Father / Guardian Name</label>
-                <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} placeholder="Father / Guardian Name" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
+                <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} placeholder="Father / Guardian Name" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" style={{ textTransform: 'uppercase' }} required />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Father's Occupation</label>
-                <input type="text" name="fatherOccupation" value={formData.fatherOccupation} onChange={handleChange} placeholder="Father's Occupation" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
+                <input type="text" name="fatherOccupation" value={formData.fatherOccupation} onChange={handleChange} placeholder="Father's Occupation" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" style={{ textTransform: 'uppercase' }} required />
               </div>
 
               <div>
@@ -423,7 +457,7 @@ const PersonalInfo = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Caste</label>
-                <input type="text" name="caste" value={formData.caste} onChange={handleChange} placeholder="Caste" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required />
+                <input type="text" name="caste" value={formData.caste} onChange={handleChange} placeholder="Caste" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" style={{ textTransform: 'uppercase' }} required />
               </div>
 
               {/* Anuual income */}
@@ -432,11 +466,11 @@ const PersonalInfo = () => {
                 <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Annual Family Income</label>
                 <select name="annualIncome" value={formData.annualIncome} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none" required>
                   <option value="" disabled>Select Income Range</option>
-                  <option value="Less than 1 Lakh">Less than 1 Lakh</option>
-                  <option value="1 Lakh to 1.5 Lakhs">1 Lakh to 1.5 Lakhs</option>
-                  <option value="1.5 Lakhs to 2.5 Lakhs">1.5 Lakhs to 2.5 Lakhs</option>
-                  <option value="2.5 Lakhs to 5 Lakhs">2.5 Lakhs to 5 Lakhs</option>
-                  <option value="More than 5 Lakhs">More than 5 Lakhs</option>
+                  <option value="Less than 1L">Less than 1 Lakh</option>
+                  <option value="1L to 1.5L">1 Lakh to 1.5 Lakhs</option>
+                  <option value="1.5L to 2.5L">1.5 Lakhs to 2.5 Lakhs</option>
+                  <option value="2.5L to 5L">2.5 Lakhs to 5 Lakhs</option>
+                  <option value="More than 5L">More than 5 Lakhs</option>
                   <option value="Nil">Nil</option>
                 </select>
               </div>
@@ -448,11 +482,11 @@ const PersonalInfo = () => {
                 </div>
                 <div className="flex space-x-3">
                   <label className="flex items-center space-x-1 cursor-pointer">
-                    <input type="radio" name="firstGrad" value="Yes" checked={formData.firstGrad === "Yes"} onChange={handleChange} className="w-5 h-5 text-blue-600" required />
+                    <input type="radio" name="firstGrad" value="YES" checked={formData.firstGrad === "YES"} onChange={handleChange} className="w-5 h-5 text-blue-600" required />
                     <span className="text-sm font-semibold text-blue-900">Yes</span>
                   </label>
                   <label className="flex items-center space-x-1 cursor-pointer">
-                    <input type="radio" name="firstGrad" value="No" checked={formData.firstGrad === "No"} onChange={handleChange} className="w-5 h-5 text-blue-600" />
+                    <input type="radio" name="firstGrad" value="NO" checked={formData.firstGrad === "NO"} onChange={handleChange} className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-semibold text-blue-900">No</span>
                   </label>
                 </div>
@@ -478,6 +512,7 @@ const PersonalInfo = () => {
                       value={formData[field.name]}
                       onChange={handleChange}
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm"
+                      style={{ textTransform: 'uppercase' }}
                       required
                     />
                   </div>
@@ -497,7 +532,7 @@ const PersonalInfo = () => {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">SSLC Marks</label>
-                    <input type="text" name="sslcMarks" value={formData.sslcMarks} onChange={handleChange} placeholder="Enter SSLC Marks out of 500" className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required />
+                    <input type="text" name="sslcMarks" value={formData.sslcMarks} onChange={handleChange} placeholder="Enter Sslc Marks Out Of 500" className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" style={{ textTransform: 'uppercase' }} required />
                   </div>
 
                   <div className="bg-blue-50 p-4 border border-blue-100 rounded-xl flex items-center justify-between">
@@ -507,11 +542,11 @@ const PersonalInfo = () => {
                     </div>
                     <div className="flex space-x-3">
                       <label className="flex items-center space-x-1 cursor-pointer">
-                        <input type="radio" name="govtSchool" value="Yes" checked={formData.govtSchool === "Yes"} onChange={handleChange} className="w-5 h-5 text-blue-600" required />
+                        <input type="radio" name="govtSchool" value="YES" checked={formData.govtSchool === "YES"} onChange={handleChange} className="w-5 h-5 text-blue-600" required />
                         <span className="text-sm font-semibold text-blue-900">Yes</span>
                       </label>
                       <label className="flex items-center space-x-1 cursor-pointer">
-                        <input type="radio" name="govtSchool" value="No" checked={formData.govtSchool === "No"} onChange={handleChange} className="w-5 h-5 text-blue-600" />
+                        <input type="radio" name="govtSchool" value="NO" checked={formData.govtSchool === "NO"} onChange={handleChange} className="w-5 h-5 text-blue-600" />
                         <span className="text-sm font-semibold text-blue-900">No</span>
                       </label>
                     </div>
@@ -527,21 +562,30 @@ const PersonalInfo = () => {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Type</label>
+                    <select name="schoolType" value={formData.schoolType} onChange={handleChange} className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" required>
+                      <option value="" disabled>Select School Type</option>
+                      <option value="GOVT. AIDED">GOVT. AIDED</option>
+                      <option value="PRIVATE AIDED">PRIVATE AIDED</option>
+                    </select>
+                  </div>
+
                   {formData.lastStudies === 'Dropout' && (
                     <div className="p-5 bg-orange-50 rounded-xl border border-orange-100 space-y-4 animate-in fade-in slide-in-from-top-2">
                       <h4 className="text-xs font-bold text-orange-800 uppercase">College Dropout Details</h4>
                       <div>
                         <label className="block text-[10px] text-orange-600 font-bold uppercase mb-1">Previous College & Place</label>
-                        <input type="text" className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500" />
+                        <input type="text" className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500" style={{ textTransform: 'uppercase' }} />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] text-orange-600 font-bold uppercase mb-1">Reg No</label>
-                          <input type="text" className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500" />
+                          <input type="text" className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500" style={{ textTransform: 'uppercase' }} />
                         </div>
                         <div>
                           <label className="block text-[10px] text-orange-600 font-bold uppercase mb-1">Year of Study</label>
-                          <input type="text" className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500" />
+                          <input type="text" className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-orange-500" style={{ textTransform: 'uppercase' }} />
                         </div>
                       </div>
                     </div>
@@ -550,18 +594,18 @@ const PersonalInfo = () => {
               </div>
             </div>
 
-            {/* Submit Action */}
-            <div className="pt-8 flex justify-end">
-              <button
-                type="submit"
-                className="px-10 py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:translate-y-[-2px] transition-all active:translate-y-0"
-              >
-                Save and Continue
-                <span className="ml-2">→</span>
-              </button>
-            </div>
           </form>
         </section>
+
+        {/* Academic Scores Section - Conditionally Rendered */}
+        {showAcademicSection && formData.lastStudies && (
+          <div id="academic-scores-section" className="mt-8">
+            {formData.lastStudies === 'Diploma' && <DiplomaScores personalData={formData} />}
+            {formData.lastStudies === 'CBSE' && <CBSEScore personalData={formData} />}
+            {formData.lastStudies === 'HSC Vocational' && <VocationalScores personalData={formData} />}
+            {formData.lastStudies === 'HSC' && <AcademicScores personalData={formData} />}
+          </div>
+        )}
 
         {/* Footer Area */}
         {/* <footer className="mt-12 text-center text-gray-400 text-sm">

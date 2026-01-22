@@ -71,7 +71,8 @@ const AcademicScores = () => {
         csOrBioMarks: scores[5].obtained,
         hscTotalMarks: totalMarks,
         hscPercentage: percentage,
-        cutoffMarks: cutoff
+        cutoffMarks: cutoff,
+        eligibility: eligibility
       };
 
       const params = new URLSearchParams();

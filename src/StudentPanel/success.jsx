@@ -8,14 +8,33 @@ import Nav from "../Nav";
 const Sucess = () => {
     const location = useLocation();
     const [showToast, setShowToast] = React.useState(false);
+    const [admissionId, setAdmissionId] = React.useState("");
+    const [studentStatus, setStudentStatus] = React.useState("");
+
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0xrX0EZirHB0kCkS3imlILIsRU7cxYRKRtawt-uw0Whr-t5g4Kys9UC8mo-UFvJb8PQ/exec";
 
     React.useEffect(() => {
         setShowToast(true);
         const timer = setTimeout(() => {
             setShowToast(false);
         }, 5000); // Hide after 5 seconds
+
+        // Fetch student data to get admission ID and status
+        const enquiryId = location.state?.enquiryId;
+        if (enquiryId) {
+            fetch(GOOGLE_SCRIPT_URL + "?action=getPersonalInfo&enquiryId=" + encodeURIComponent(enquiryId))
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        setAdmissionId(data.data.admissionId || "");
+                        setStudentStatus(data.data.status || "");
+                    }
+                })
+                .catch(error => console.error("Error fetching student data:", error));
+        }
+
         return () => clearTimeout(timer);
-    }, []);
+    }, [location.state?.enquiryId]);
 
     const handleHome = () => {
         window.location.href = "/";
@@ -336,6 +355,20 @@ const Sucess = () => {
                                     className="p-2 border-2 border-blue-200 rounded-lg font-bold text-2xl text-center text-blue-800 focus:outline-none w-full max-w-xs bg-blue-50"
                                 />
                             </div>
+
+                            {studentStatus === "Admitted" && admissionId && (
+                                <div className="mb-8">
+                                    <h1 className="text-2xl font-bold text-gray-700 mb-3">Admission ID</h1>
+                                    <input
+                                        type="text"
+                                        value={admissionId}
+                                        readOnly
+                                        placeholder="Admission ID"
+                                        className="p-2 border-2 border-green-200 rounded-lg font-bold text-2xl text-center text-green-800 focus:outline-none w-full max-w-xs bg-green-50"
+                                    />
+                                    <p className="text-green-600 font-semibold mt-2">✓ Admitted Successfully!</p>
+                                </div>
+                            )}
                         </div>
 
                         <div>
