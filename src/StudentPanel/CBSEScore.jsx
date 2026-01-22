@@ -50,11 +50,7 @@ const AcademicScores = ({ personalData }) => {
         }
 
         // Check if all scores are entered
-        const allScoresEntered = scores.every(s => s.obtained && s.obtained.trim() !== "");
-        if (!allScoresEntered) {
-            alert("Please enter marks for all subjects");
-            return;
-        }
+       
 
         // Check if personal data is available
         if (!personalData || !personalData.fullName) {
@@ -67,11 +63,14 @@ const AcademicScores = ({ personalData }) => {
         try {
             console.log("Submitting combined personal and CBSE data...");
             
+            // Remove the 'initial' field as it's already combined in fullName
+            const { initial, ...cleanedPersonalData } = personalData;
+            
             // Prepare combined data (personal + scores)
             const combinedData = {
                 action: "submitStudentData",
-                // Personal info fields
-                ...personalData,
+                // Personal info fields (without 'initial')
+                ...cleanedPersonalData,
                 // Score fields
                 courseType: "CBSE",
                 schoolName,
@@ -208,7 +207,7 @@ const AcademicScores = ({ personalData }) => {
                 <div className="p-8 space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place <span className="text-red-600">*</span></label>
                             <input
                                 type="text"
                                 value={schoolName}
@@ -220,7 +219,7 @@ const AcademicScores = ({ personalData }) => {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number <span className="text-red-600">*</span></label>
                             <input
                                 type="text"
                                 value={registerNumber}
@@ -235,7 +234,7 @@ const AcademicScores = ({ personalData }) => {
 
                     <div className="grid grid-cols-2 gap-4 mt-5">
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study <span className="text-red-600">*</span></label>
                             <select
                                 value={mediumOfStudy}
                                 onChange={(e) => setMediumOfStudy(e.target.value)}
@@ -259,7 +258,7 @@ const AcademicScores = ({ personalData }) => {
                             )}
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing <span className="text-red-600">*</span></label>
                             <input
                                 type="text"
                                 value={yearOfPassing}

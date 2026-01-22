@@ -68,16 +68,16 @@ export default function EditApplicationModal({
   };
 
   const degree = [
-    { id: 1, department: "AD(Artificial and Data Science Engineering)" },
-    { id: 2, department: "AGRI(Agricultural Engineering)" },
-    { id: 3, department: "BME(Bio-Medical Engineering)" },
-    { id: 4, department: "CSE(Computer Science and Engineering)" },
-    { id: 5, department: "CIVIL(Civil Engineering)" },
-    { id: 6, department: "ECE(Electronics and Communication Engineering )" },
-    { id: 7, department: "EEE(Electrical and Electronics Engineering)" },
-    { id: 8, department: "IT(Information Technology)" },
-    { id: 9, department: "MECH(Mechanical Engineering)" },
-  ];
+    { id: 1, department: "AIDS(Artificial Intelligence and Data Science Engineering)", short: "AIDS" },
+    { id: 2, department: "AGRI(Agricultural Engineering)", short: "AGRI" },
+    { id: 3, department: "BME(Bio-Medical Engineering)", short: "BME" },
+    { id: 4, department: "CSE(Computer Science and Engineering)", short: "CSE" },
+    { id: 5, department: "CIVIL(Civil Engineering)", short: "CIVIL" },
+    { id: 6, department: "ECE(Electronics and Communication Engineering )", short: "ECE" },
+    { id: 7, department: "EEE(Electrical and Electronics Engineering)", short: "EEE" },
+    { id: 8, department: "IT(Information Technology)", short: "IT" },
+    { id: 9, department: "MECH(Mechanical Engineering)", short: "MECH" },
+  ]
 
   // Sync editData with applicationData when modal opens or data changes
   useEffect(() => {
@@ -95,13 +95,19 @@ export default function EditApplicationModal({
 
   // Auto-calculate academic totals/cutoff/eligibility when subject marks change
   useEffect(() => {
-    const { totalMarks, percentage, cutoff, eligibility } = computeDerivedScores(scoresData);
+    // Skip calculations for Vocational students (only calculate total and percentage)
+    const isVocational = scoresData.courseType === 'Vocational' || editData.lastStudies === 'Vocational';
+    const { totalMarks, percentage, cutoff, eligibility } = computeDerivedScores(scoresData, isVocational);
 
     const updates = {};
     if (totalMarks !== (scoresData.totalMarks ?? 0)) updates.totalMarks = totalMarks;
     if (percentage !== (scoresData.percentage ?? "")) updates.percentage = percentage;
-    if (cutoff !== (scoresData.cutoff ?? "")) updates.cutoff = cutoff;
-    if (eligibility !== (scoresData.eligibility ?? "")) updates.eligibility = eligibility;
+    
+    // Only auto-calculate cutoff and eligibility for non-Vocational students
+    if (!isVocational) {
+      if (cutoff !== (scoresData.cutoff ?? "")) updates.cutoff = cutoff;
+      if (eligibility !== (scoresData.eligibility ?? "")) updates.eligibility = eligibility;
+    }
 
     if (Object.keys(updates).length > 0) {
       setScoresData((prev) => ({ ...prev, ...updates }));
@@ -119,6 +125,8 @@ export default function EditApplicationModal({
     scoresData.subject4,
     scoresData.subject5,
     scoresData.subject6,
+    scoresData.courseType,
+    editData.lastStudies,
   ]);
 
   // Fetch scores data from Google Sheet
@@ -142,7 +150,49 @@ export default function EditApplicationModal({
 
       const latestScores = getLatestScoresByCourse(rawScores);
       // Convert array to object, using the first (latest) score
-      const scoresObject = latestScores.length > 0 ? latestScores[0] : {};
+      let scoresObject = latestScores.length > 0 ? latestScores[0] : {};
+      
+      // Map subjects correctly based on course type
+      if (scoresObject.courseType) {
+        const courseType = scoresObject.courseType;
+        
+        // Define subject mappings for each course type
+        const hscSubjects = ['Tamil', 'English', 'Mathematics', 'Physics', 'Chemistry', 'Computer Science / Biology'];
+        const cbseSubjects = ['English', 'Mathematics', 'Physics', 'Chemistry', 'Computer Science / Biology'];
+        const vocationalSubjects = ['Tamil', 'English']; // First 2 are static, rest 4 are custom
+        
+        const mappedScores = { ...scoresObject };
+        
+        if (courseType === 'HSC') {
+          // Ensure HSC subjects are properly mapped
+          hscSubjects.forEach((subjectName, index) => {
+            const num = index + 1;
+            if (!mappedScores[`subject${num}`] || mappedScores[`subject${num}`] !== subjectName) {
+              mappedScores[`subject${num}`] = subjectName;
+            }
+          });
+        } else if (courseType === 'CBSE') {
+          // Ensure CBSE subjects are properly mapped
+          cbseSubjects.forEach((subjectName, index) => {
+            const num = index + 1;
+            if (!mappedScores[`subject${num}`] || mappedScores[`subject${num}`] !== subjectName) {
+              mappedScores[`subject${num}`] = subjectName;
+            }
+          });
+        } else if (courseType === 'Vocational') {
+          // Ensure Vocational first 2 subjects are static
+          vocationalSubjects.forEach((subjectName, index) => {
+            const num = index + 1;
+            if (!mappedScores[`subject${num}`] || mappedScores[`subject${num}`] !== subjectName) {
+              mappedScores[`subject${num}`] = subjectName;
+            }
+          });
+          // Keep subjects 3-6 as they are (custom subjects)
+        }
+        
+        scoresObject = mappedScores;
+      }
+      
       setScoresData(scoresObject);
     } catch (error) {
       console.error("Error fetching scores:", error);
@@ -330,7 +380,7 @@ export default function EditApplicationModal({
     return isNaN(num) ? 0 : num;
   };
 
-  const computeDerivedScores = (data) => {
+  const computeDerivedScores = (data, isVocational = false) => {
     const subjectIndexes = [1, 2, 3, 4, 5, 6];
 
     // Consider only subjects that have a name; fallback to all six if none named
@@ -342,6 +392,11 @@ export default function EditApplicationModal({
 
     const maxPossible = subjectsToUse.length * 100;
     const percentage = maxPossible > 0 ? ((totalMarks / maxPossible) * 100).toFixed(2) : "";
+
+    // Skip cutoff and eligibility calculations for Vocational students
+    if (isVocational) {
+      return { totalMarks, percentage, cutoff: "", eligibility: "" };
+    }
 
     // Cutoff: Maths + (Physics/2) + (Chemistry/2)
     const math = parseMark(data.subject3Marks); // Mathematics
@@ -521,17 +576,17 @@ export default function EditApplicationModal({
       // Department checkboxes - Each has its own unique field name
       const deptMapping = {
         // Short format
-        'AI & DS': 'ad-dept',
+        'AIDS': 'ad-dept',
         'BME': 'bme-dept',
-        'Civil': 'civil-dept',
+        'CIVIL': 'civil-dept',
         'CSE': 'cse-dept',
         'ECE': 'ece-dept',
         'EEE': 'eee-dept',
         'IT': 'it-dept',
-        'Mechanical': 'mech-dept',
-        'Agriculture': 'age-dept',
+        'MECH': 'mech-dept',
+        'AGRI': 'age-dept',
         // Full format (with descriptions)
-        'AD(Artificial and Data Science Engineering)': 'ad-dept',
+        'AIDS(Artificial Intelligence and Data Science Engineering)': 'ad-dept',
         'BME(Bio Medical Engineering)': 'bme-dept',
         'BME(Bio-Medical Engineering)': 'bme-dept',
         'CIVIL(Civil Engineering)': 'civil-dept',
@@ -543,11 +598,7 @@ export default function EditApplicationModal({
         'AGRI(Agricultural Engineering)': 'age-dept'
       };
 
-      console.log('📋 Branch Preferences:', {
-        pref1: editData.preference1,
-        pref2: editData.preference2,
-        pref3: editData.preference3
-      });
+      
 
       // Check the selected department checkboxes (like Python: widget.field_value = True)
       const preferences = [editData.preference1, editData.preference2, editData.preference3];
@@ -928,11 +979,133 @@ export default function EditApplicationModal({
         console.log("📊 Updated data being sent to dashboard:", updatedEditData);
         onUpdateSuccess(updatedEditData);
 
-        // Navigate to Fees Info page after successful save
-        console.log('✅ Navigating to Fees Info page');
-        console.log('📊 Passing scoresData to FeesInfo:', scoresData);
-        navigate('/feesInfo', { state: { applicationData: updatedEditData, scoresData: scoresData } });
+        // Navigate to Fees Success page after successful save
+        console.log('✅ Navigating to Fees Success page');
+        console.log('📊 Passing scoresData to FeesSuccess:', scoresData);
+        navigate('/fees-success', { state: { applicationData: updatedEditData, scoresData: scoresData } });
         onClose(); // Close the modal after navigation
+      } else {
+        console.error('❌ Update failed:', responseData);
+        alert("Failed to update information. Please try again.");
+      }
+    } catch (error) {
+      console.error("❌ Error during save:", error);
+      alert("An error occurred while saving: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveOnly = async () => {
+    setIsSaving(true);
+    
+    try {
+      // Step 1: Save personal info using GET method with updatePersonalInfo action
+      const params = new URLSearchParams();
+      params.append("action", "updatePersonalInfo");
+      
+      for (const [key, value] of Object.entries(editData)) {
+        params.append(key, value);
+      }
+
+      const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
+      const responseData = await response.json();
+
+      // Check if the response indicates success
+      if (!responseData.success) {
+        alert("Failed to update personal info: " + (responseData.message || "Unknown error"));
+        setIsSaving(false);
+        return;
+      }
+
+      // Update editData with server-returned admission ID (if generated)
+      let updatedEditData = { ...editData };
+      if (responseData.admissionId) {
+        updatedEditData.admissionId = responseData.admissionId;
+        setEditData(prev => ({
+          ...prev,
+          admissionId: responseData.admissionId
+        }));
+        console.log("✅ Admission ID from server: " + responseData.admissionId);
+      }
+
+      // Step 2: Save scores if they were edited (only when data exists)
+      if (Object.keys(scoresData).length > 0) {
+        const scoreParams = new URLSearchParams();
+        scoreParams.append("action", "updateScores");
+        scoreParams.append("enquiryId", editData.enquiryId);
+        
+        // Add all score fields
+        for (const [key, value] of Object.entries(scoresData)) {
+          scoreParams.append(key, value);
+        }
+        
+        const scoresResponse = await fetch(GOOGLE_SCRIPT_URL + "?" + scoreParams.toString());
+        const scoresResult = await scoresResponse.json();
+        
+        if (scoresResult.success) {
+          console.log("✅ Scores saved successfully for enquiry ID: " + editData.enquiryId);
+        } else {
+          console.error("❌ Failed to save scores:", scoresResult.message);
+        }
+      }
+
+      // Step 3: Save fees data via GET method if fees fields exist (avoids CORS)
+      const feeFields = ["tuitionFee", "developmentFee", "admissionFee", "cautionDeposit", 
+                         "optionalFees", "scStScholarship", "fgScholarship", "busFee", 
+                         "messBill", "roomRent", "laundryCharges", "feeSubTotal", 
+                         "feeCollegeTotal", "feeHostelTotal", "feeOverallTotal"];
+      
+      const feesData = {};
+      let hasFeeData = false;
+      for (const feeField of feeFields) {
+        if (editData[feeField] !== undefined && editData[feeField] !== null && editData[feeField] !== '') {
+          feesData[feeField] = editData[feeField];
+          hasFeeData = true;
+        }
+      }
+      
+      if (hasFeeData) {
+        console.log("💾 Saving fees data:", feesData);
+        feesData.enquiryId = editData.enquiryId;
+        feesData.admissionId = updatedEditData.admissionId || editData.admissionId || '';
+        feesData.fullName = editData.fullName || '';
+        feesData.quota = editData.quota || '';
+        feesData.status = editData.status || 'Pending'; // Include status with fees
+        
+        const feeParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(feesData)) {
+          feeParams.append(key, value);
+        }
+        
+        console.log("📤 Sending fees to backend with query params (GET method)");
+        
+        const feesResponse = await fetch(GOOGLE_SCRIPT_URL + "?" + feeParams.toString());
+        
+        const feesResult = await feesResponse.json();
+        if (feesResult.success) {
+          console.log("✅ Fees data saved successfully");
+          // Update editData with fees information from response if available
+          if (feesResult.updatedData) {
+            updatedEditData = { ...updatedEditData, ...feesResult.updatedData };
+          }
+        } else {
+          console.error("❌ Failed to save fees data:", feesResult.message);
+          alert("Note: Personal info and scores saved but fees data save may have failed. Please try again.");
+        }
+      }
+
+      if (responseData.success) {
+        console.log("✅ Save successful! Calling onUpdateSuccess callback...");
+        console.log("📊 Updated data being sent to dashboard:", updatedEditData);
+        onUpdateSuccess(updatedEditData);
+
+        // Show success alert
+        alert("Data Updated Successfully");
+
+        // Close modal and navigate to admin dashboard
+        onClose();
+        navigate('/admin');
       } else {
         console.error('❌ Update failed:', responseData);
         alert("Failed to update information. Please try again.");
@@ -1206,7 +1379,7 @@ export default function EditApplicationModal({
                 onChange={(e) => handleInputChange("roomType", e.target.value)}
                 className="w-full text-sm bg-transparent border-none outline-none focus:ring-0"
               >
-                <option value="">Select Room Type</option>
+                <option value="" disabled >Select Room Type</option>
                 <option value="Normal4">Normal (4 Members)</option>
                 <option value="Attach3">Attached Bath (3 Members)</option>
                 <option value="AC2">AC + Attached (2 Members)</option>
@@ -1357,15 +1530,15 @@ export default function EditApplicationModal({
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
               >
                 <option value="">Select Branch</option>
-                <option value="AI & DS">AI & DS</option>
-                <option value="Agriculture">Agriculture</option>
+                <option value="AIDS">AI & DS</option>
+                <option value="AGRI">AGRI</option>
                 <option value="BME">BME</option>
-                <option value="Civil">Civil</option>
+                <option value="CIVIL">CIVIL</option>
                 <option value="CSE">CSE</option>
                 <option value="ECE">ECE</option>
                 <option value="EEE">EEE</option>
                 <option value="IT">IT</option>
-                <option value="Mechanical">Mechanical</option>
+                <option value="MECH">MECH</option>
               </select>
             </div>
 
@@ -1384,15 +1557,21 @@ export default function EditApplicationModal({
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={editData.email || ""}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                  disabled
-                />
+              <div className="bg-blue-50 p-4 border border-blue-100 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="block text-sm font-bold text-blue-900 uppercase">First Graduate?</span>
+                  <span className="text-xs text-blue-700/70 capitalize">Are you the first in family to graduate?</span>
+                </div>
+                <div className="flex space-x-3">
+                  <label className="flex items-center space-x-1 cursor-pointer">
+                    <input type="radio" name="firstGrad" value="Yes" checked={editData.firstGrad === "Yes"} onChange={(e) => handleInputChange("firstGrad", e.target.value)} className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-semibold text-blue-900">Yes</span>
+                  </label>
+                  <label className="flex items-center space-x-1 cursor-pointer">
+                    <input type="radio" name="firstGrad" value="No" checked={editData.firstGrad === "No"} onChange={(e) => handleInputChange("firstGrad", e.target.value)} className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-semibold text-blue-900">No</span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -1464,11 +1643,11 @@ export default function EditApplicationModal({
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
               >
                 <option value="" disabled>Select Income Range</option>
-                <option value="Less than 1 Lakh">Less than 1 Lakh</option>
-                <option value="1 Lakh to 1.5 Lakhs">1 Lakh to 1.5 Lakhs</option>
-                <option value="1.5 Lakhs to 2.5 Lakhs">1.5 Lakhs to 2.5 Lakhs</option>
-                <option value="2.5 Lakhs to 5 Lakhs">2.5 Lakhs to 5 Lakhs</option>
-                <option value="More than 5 Lakhs">More than 5 Lakhs</option>
+                <option value="Less than 1L">Less than 1 Lakh</option>
+                <option value="1 Lakh to 1.5L">1 Lakh to 1.5 Lakhs</option>
+                <option value="1.5L to 2.5L">1.5 Lakhs to 2.5 Lakhs</option>
+                <option value="2.5L to 5L">2.5 Lakhs to 5 Lakhs</option>
+                <option value="More than 5L">More than 5 Lakhs</option>
                 <option value="Nil">Nil</option>
               </select>
               
@@ -1609,16 +1788,20 @@ export default function EditApplicationModal({
                       className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
                     />
                   </div>
-                  {/* <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Location</label>
-                    <input
-                      type="text"
-                      value={editData.schoolName || ""}
-                      onChange={(e) => handleInputChange("schoolName", e.target.value)}
-                      placeholder="Enter School Name & Location"
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Type</label>
+                    <select
+                      value={editData.schoolType || ""}
+                      onChange={(e) => handleInputChange("schoolType", e.target.value)}
                       className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                    />
-                  </div> */}
+                      required
+                    >
+                      <option value="" disabled>Select School Type</option>
+                      <option value="GOVT">GOVERNMENT</option>
+                      <option value="GOVT. AIDED">GOVT. AIDED</option>
+                      <option value="PRIVATE">PRIVATE</option>
+                    </select>
+                  </div>
                   <div className="flex items-center space-x-6 pt-2">
                     <span className="text-sm font-bold text-gray-700">Govt School (6th-12th)?</span>
                     <div className="flex space-x-3">
@@ -1643,7 +1826,7 @@ export default function EditApplicationModal({
                     >
                       <option value="">Choose your previous course</option>
                       <option value="HSC">HSC</option>
-                      <option value="HSC Vocational">HSC Vocational</option>
+                      <option value="Vocational">Vocational</option>
                       <option value="CBSE">CBSE</option>
                       <option value="Diploma">Diploma</option>
                       <option value="Dropout">Dropout</option>
@@ -1735,49 +1918,21 @@ export default function EditApplicationModal({
               </div>
             </div>
 
-            <hr className="border-gray-100" />
-
-            {/* First Graduate & Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              <div className="bg-blue-50 p-4 border border-blue-100 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="block text-sm font-bold text-blue-900 uppercase">First Graduate?</span>
-                  <span className="text-xs text-blue-700/70 capitalize">Are you the first in family to graduate?</span>
-                </div>
-                <div className="flex space-x-3">
-                  <label className="flex items-center space-x-1 cursor-pointer">
-                    <input type="radio" name="firstGrad" value="Yes" checked={editData.firstGrad === "Yes"} onChange={(e) => handleInputChange("firstGrad", e.target.value)} className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-semibold text-blue-900">Yes</span>
-                  </label>
-                  <label className="flex items-center space-x-1 cursor-pointer">
-                    <input type="radio" name="firstGrad" value="No" checked={editData.firstGrad === "No"} onChange={(e) => handleInputChange("firstGrad", e.target.value)} className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-semibold text-blue-900">No</span>
-                  </label>
-                </div>
-              </div>
-
-
-
-
-
-
-            </div>
           </div>
 
           {/* Academic Scores Section */}
-          {editData.lastStudies !== 'Diploma' && (
+          {editData.lastStudies !== 'Diploma' && editData.lastStudies && (
           <>
           <div className="bg-green-50 px-8 py-4 border-b border-green-100">
             <h3 className="text-lg font-bold text-green-900">Academic Scores</h3>
           </div>
           <div className="p-8 space-y-8">
-            {Object.keys(scoresData).length > 0 ? (
               <div className="space-y-6">
                 <div className="border border-gray-200 rounded-xl p-6 space-y-6 bg-gray-50">
                   {/* Score Header */}
                   <div className="bg-white p-4 rounded-lg border border-gray-100">
                     <h4 className="text-lg font-bold text-gray-800">
-                      {scoresData.courseType}
+                      {scoresData.courseType || editData.lastStudies}
                     </h4>
                     {/* <p className="text-sm text-gray-500 mt-1">
                       Submitted: {formatDateDisplay(scoresData.date)}
@@ -1862,33 +2017,121 @@ export default function EditApplicationModal({
                           </tr>
                         </thead>
                         <tbody>
-                          {(editData.lastStudies === 'CBSE' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6]).map((num) => (
-                            <tr key={num} className={num % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                              <td className="border border-gray-300 px-4 py-2">
-                                <input
-                                  type="text"
-                                  value={scoresData[`subject${num}`] || ""}
-                                  onChange={(e) => {
-                                    setScoresData(prev => ({ ...prev, [`subject${num}`]: e.target.value }));
-                                  }}
-                                  className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                  placeholder={`Subject ${num}`}
-                                />
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2 text-center text-gray-800">100</td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                <input
-                                  type="number"
-                                  value={scoresData[`subject${num}Marks`] || ""}
-                                  onChange={(e) => {
-                                    setScoresData(prev => ({ ...prev, [`subject${num}Marks`]: e.target.value }));
-                                  }}
-                                  className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-center no-spin"
-                                  placeholder="Enter marks"
-                                />
-                              </td>
-                            </tr>
-                          ))}
+                          {editData.lastStudies === 'HSC' ? (
+                            <>
+                              {/* HSC - 6 static subjects */}
+                              {[
+                                { num: 1, name: 'Tamil' },
+                                { num: 2, name: 'English' },
+                                { num: 3, name: 'Mathematics' },
+                                { num: 4, name: 'Physics' },
+                                { num: 5, name: 'Chemistry' },
+                                { num: 6, name: 'Computer Science / Biology' }
+                              ].map(({ num, name }) => (
+                                <tr key={num} className={num % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                      type="text"
+                                      value={scoresData[`subject${num}`] || name}
+                                      readOnly
+                                      className="w-full px-2 py-1 bg-gray-50 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-center text-gray-800">100</td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                      type="number"
+                                      value={scoresData[`subject${num}Marks`] || ""}
+                                      onChange={(e) => {
+                                        setScoresData(prev => ({ ...prev, [`subject${num}`]: name, [`subject${num}Marks`]: e.target.value }));
+                                      }}
+                                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-center no-spin"
+                                      placeholder="Enter marks"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          ) : editData.lastStudies === 'CBSE' ? (
+                            <>
+                              {/* CBSE - 5 static subjects (no Tamil) */}
+                              {[
+                                { num: 1, name: 'English' },
+                                { num: 2, name: 'Mathematics' },
+                                { num: 3, name: 'Physics' },
+                                { num: 4, name: 'Chemistry' },
+                                { num: 5, name: 'Computer Science / Biology' }
+                              ].map(({ num, name }) => (
+                                <tr key={num} className={num % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                      type="text"
+                                      value={scoresData[`subject${num}`] || name}
+                                      readOnly
+                                      className="w-full px-2 py-1 bg-gray-50 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-center text-gray-800">100</td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                      type="number"
+                                      value={scoresData[`subject${num}Marks`] || ""}
+                                      onChange={(e) => {
+                                        setScoresData(prev => ({ ...prev, [`subject${num}`]: name, [`subject${num}Marks`]: e.target.value }));
+                                      }}
+                                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-center no-spin"
+                                      placeholder="Enter marks"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          ) : editData.lastStudies === 'Vocational' ? (
+                            <>
+                              {/* Vocational - Tamil and English static, 4 typable fields */}
+                              {[
+                                { num: 1, name: 'Tamil', static: true },
+                                { num: 2, name: 'English', static: true },
+                                { num: 3, name: '', static: false },
+                                { num: 4, name: '', static: false },
+                                { num: 5, name: '', static: false },
+                                { num: 6, name: '', static: false }
+                              ].map(({ num, name, static: isStatic }) => (
+                                <tr key={num} className={num % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                      type="text"
+                                      value={scoresData[`subject${num}`] || name}
+                                      onChange={(e) => {
+                                        if (!isStatic) {
+                                          setScoresData(prev => ({ ...prev, [`subject${num}`]: e.target.value }));
+                                        }
+                                      }}
+                                      readOnly={isStatic}
+                                      className={`w-full px-2 py-1 ${isStatic ? 'bg-gray-50' : 'bg-white'} border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none`}
+                                      placeholder={isStatic ? '' : `Subject ${num}`}
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-center text-gray-800">100</td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                      type="number"
+                                      value={scoresData[`subject${num}Marks`] || ""}
+                                      onChange={(e) => {
+                                        setScoresData(prev => ({ 
+                                          ...prev, 
+                                          [`subject${num}`]: isStatic ? name : (prev[`subject${num}`] || ''),
+                                          [`subject${num}Marks`]: e.target.value 
+                                        }));
+                                      }}
+                                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-center no-spin"
+                                      placeholder="Enter marks"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          ) : null}
                         </tbody>
                       </table>
                     </div>
@@ -1946,15 +2189,6 @@ export default function EditApplicationModal({
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-gray-500 font-medium">No score data available for this student</p>
-                <p className="text-gray-400 text-sm mt-1">Score will appear once student submits academic information</p>
-              </div>
-            )}
           </div>
           </>
           )}
@@ -1988,14 +2222,21 @@ export default function EditApplicationModal({
               Close
             </button>
 
+            <button
+              onClick={handleSaveOnly}
+              disabled={isSaving}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </button>
 
-            {/* Save change */}
+            {/* Submit and Preview */}
             <button
               onClick={handleSave}
               disabled={isSaving}
               className="px-10 py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:translate-y-[-2px] transition-all active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? "Saving..." : "Save and Continue"}
+              {isSaving ? "Submitting..." : "Submit and Preview"}
             </button>
           </div>
         </div>
@@ -2046,7 +2287,7 @@ export default function EditApplicationModal({
                     <span>Preview PDF</span>
                   </button>
                 </div>
-                {(editData.lastStudies === 'HSC' || editData.lastStudies === 'HSC Vocational' || editData.lastStudies === 'CBSE') && (
+                {(editData.lastStudies === 'HSC' || editData.lastStudies === 'Vocational' || editData.lastStudies === 'CBSE') && (
                   <button
                     onClick={handleNavigateToScores}
                     className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"

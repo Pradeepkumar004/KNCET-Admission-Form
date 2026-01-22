@@ -10,6 +10,7 @@ const Sucess = () => {
     const [showToast, setShowToast] = React.useState(false);
     const [admissionId, setAdmissionId] = React.useState("");
     const [studentStatus, setStudentStatus] = React.useState("");
+    const [studentData, setStudentData] = React.useState(null);
 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0xrX0EZirHB0kCkS3imlILIsRU7cxYRKRtawt-uw0Whr-t5g4Kys9UC8mo-UFvJb8PQ/exec";
 
@@ -28,6 +29,7 @@ const Sucess = () => {
                     if (data.success && data.data) {
                         setAdmissionId(data.data.admissionId || "");
                         setStudentStatus(data.data.status || "");
+                        setStudentData(data.data);
                     }
                 })
                 .catch(error => console.error("Error fetching student data:", error));
@@ -41,31 +43,68 @@ const Sucess = () => {
     }
 
     const handleDownloadReceipt = () => {
-        // Get form data from localStorage or state
-        const formData = JSON.parse(localStorage.getItem('submittedFormData') || '{}');
-        const academicData = JSON.parse(localStorage.getItem('academicScoresData') || '{}');
+        // Use fetched data or fall back to localStorage
+        const formData = studentData || JSON.parse(localStorage.getItem('submittedFormData') || '{}');
+        const enquiryId = location.state?.enquiryId || localStorage.getItem('enquiryId') || '';
+
+        // Department mapping from short to full names
+        const departmentMap = {
+            'AD': 'Artificial and Data Science Engineering',
+            'AGRI': 'Agricultural Engineering',
+            'BME': 'Bio-Medical Engineering',
+            'CSE': 'Computer Science and Engineering',
+            'CIVIL': 'Civil Engineering',
+            'ECE': 'Electronics and Communication Engineering',
+            'EEE': 'Electrical and Electronics Engineering',
+            'IT': 'Information Technology',
+            'MECH': 'Mechanical Engineering',
+        };
+
+        // Function to get full department name
+        const getFullDepartmentName = (shortForm) => {
+            if (!shortForm || shortForm === 'N/A') return 'N/A';
+            return departmentMap[shortForm] || shortForm;
+        };
+
+        // Function to get full quota name
+        const getFullQuotaName = (quota) => {
+            if (quota === 'MQ') return 'Management Quota';
+            if (quota === 'GQ') return 'Government Quota';
+            return quota;
+        };
 
         const doc = new jsPDF();
 
-        // Add college logo and header
+        // Add college logo on top left
+        const logoImg = new Image();
+        logoImg.src = Logo;
+        doc.addImage(logoImg, 'PNG', 15, 8, 25, 25); // x, y, width, height
+
+        // Add college header (shifted right to accommodate logo)
         doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
-        doc.text('Kongunadu College of Engineering & Technology', 105, 15, { align: 'center' });
+        doc.text('Kongunadu College of Engineering & Technology', 45, 15);
         doc.setFontSize(12);
         doc.setFont(undefined, 'normal');
-        doc.text('Autonomous', 105, 22, { align: 'center' });
+        doc.text('Autonomous', 45, 22);
         doc.setFontSize(10);
-        doc.text('Namakkal - Trichy Main Road, Thottiapatti (Po), Thottiam Taluk, Trichy Dt. 621 215', 105, 28, { align: 'center' });
+        doc.text('Namakkal - Trichy Main Road, Thottiapatti (Po), Thottiam Taluk, Trichy Dt. 621 215', 45, 28);
 
         // Add title
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        doc.text('Admission Application Receipt', 105, 40, { align: 'center' });
+        doc.text('Admission Application Receipt', 105, 42, { align: 'center' });
 
         // Draw a line
-        doc.line(20, 45, 190, 45);
+        doc.line(20, 50, 190, 50);
 
-        let yPosition = 55;
+        let yPosition = 60;
+
+        // Add Enquiry ID centered
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Enquiry ID: ${enquiryId}`, 105, yPosition, { align: 'center' });
+        yPosition += 10;
 
         // Personal Information
         doc.setFontSize(12);
@@ -78,7 +117,6 @@ const Sucess = () => {
 
         const personalInfo = [
             ['Full Name', formData.fullName || 'N/A'],
-            ['Email', formData.email || 'N/A'],
             ['Date of Birth', formData.dob || 'N/A'],
             ['Gender', formData.gender || 'N/A'],
             ['Accommodation', formData.accommodation || 'N/A'],
@@ -104,10 +142,10 @@ const Sucess = () => {
         doc.setFont(undefined, 'normal');
         doc.setFontSize(10);
         const preferences = [
-            ['1st Preference', formData.preference1 || 'N/A'],
-            ['2nd Preference', formData.preference2 || 'N/A'],
-            ['3rd Preference', formData.preference3 || 'N/A'],
-            ['Seat Type', formData.quota || 'N/A'],
+            ['1st Preference', getFullDepartmentName(formData.preference1)],
+            ['2nd Preference', getFullDepartmentName(formData.preference2)],
+            ['3rd Preference', getFullDepartmentName(formData.preference3)],
+            ['Seat Type', getFullQuotaName(formData.quota)],
             ['Admission Type', formData.entry || 'N/A'],
         ];
 
@@ -195,6 +233,7 @@ const Sucess = () => {
         doc.setFontSize(10);
         const educationInfo = [
             ['SSLC Marks', formData.sslcMarks || 'N/A'],
+            ['School Type', formData.schoolType || 'N/A'],
             ['Govt School (6th-12th)', formData.govtSchool || 'N/A'],
             ['Last Studied', formData.lastStudies || 'N/A'],
         ];
@@ -209,8 +248,8 @@ const Sucess = () => {
             yPosition += 7;
         });
 
-        // Academic Scores Section
-        if (academicData && Object.keys(academicData).length > 0) {
+        // Academic Scores Section (if courseType exists)
+        if (formData.courseType) {
             yPosition += 5;
             if (yPosition > 250) {
                 doc.addPage();
@@ -218,56 +257,63 @@ const Sucess = () => {
             }
             doc.setFont(undefined, 'bold');
             doc.setFontSize(12);
-            doc.text('Academic Scores', 20, yPosition);
+            doc.text(`Academic Scores - ${formData.courseType}`, 20, yPosition);
             yPosition += 10;
 
             doc.setFont(undefined, 'normal');
             doc.setFontSize(10);
 
             // School details
-            if (academicData.schoolName) {
-                doc.text('School Name:', 20, yPosition);
-                doc.text(academicData.schoolName || 'N/A', 80, yPosition);
-                yPosition += 7;
-            }
-            if (academicData.registerNumber) {
-                doc.text('Register Number:', 20, yPosition);
-                doc.text(academicData.registerNumber || 'N/A', 80, yPosition);
-                yPosition += 7;
-            }
-            if (academicData.medium) {
-                doc.text('Medium of Study:', 20, yPosition);
-                doc.text(academicData.medium || 'N/A', 80, yPosition);
-                yPosition += 7;
-            }
-            if (academicData.yearOfPassing) {
-                doc.text('Year of Passing:', 20, yPosition);
-                doc.text(academicData.yearOfPassing || 'N/A', 80, yPosition);
-                yPosition += 7;
-            }
+            const academicDetails = [
+                ['School Name', formData.schoolName],
+                ['Register Number', formData.registerNumber],
+                ['Medium of Study', formData.medium],
+                ['Year of Passing', formData.yearOfPassing],
+            ];
 
-            // Subject-wise marks
-            if (academicData.scores && academicData.scores.length > 0) {
-                yPosition += 5;
-                if (yPosition > 240) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-                doc.setFont(undefined, 'bold');
-                doc.text('Subject Marks:', 20, yPosition);
-                yPosition += 7;
-
-                doc.setFont(undefined, 'normal');
-                academicData.scores.forEach((score) => {
+            academicDetails.forEach(([label, value]) => {
+                if (value) {
                     if (yPosition > 270) {
                         doc.addPage();
                         yPosition = 20;
                     }
-                    doc.text(`${score.subject}:`, 30, yPosition);
-                    doc.text(`${score.obtained}/${score.max}`, 120, yPosition);
-                    yPosition += 6;
-                });
+                    doc.text(`${label}:`, 20, yPosition);
+                    doc.text(value.toString(), 80, yPosition);
+                    yPosition += 7;
+                }
+            });
+
+            // Subject-wise marks
+            yPosition += 3;
+            if (yPosition > 240) {
+                doc.addPage();
+                yPosition = 20;
             }
+            doc.setFont(undefined, 'bold');
+            doc.text('Subject Marks:', 20, yPosition);
+            yPosition += 7;
+
+            doc.setFont(undefined, 'normal');
+            
+            // Create subject marks array based on available data
+            const subjectMarks = [];
+            for (let i = 1; i <= 6; i++) {
+                const subjectKey = `subject${i}`;
+                const marksKey = `subject${i}Marks`;
+                if (formData[subjectKey]) {
+                    subjectMarks.push([formData[subjectKey], formData[marksKey] || 'N/A']);
+                }
+            }
+
+            subjectMarks.forEach(([subject, marks]) => {
+                if (yPosition > 270) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                doc.text(`${subject}:`, 30, yPosition);
+                doc.text(`${marks}/100`, 120, yPosition);
+                yPosition += 6;
+            });
 
             // Summary
             yPosition += 3;
@@ -276,21 +322,57 @@ const Sucess = () => {
                 yPosition = 20;
             }
             doc.setFont(undefined, 'bold');
-            if (academicData.totalMarks) {
-                doc.text('Total Marks:', 20, yPosition);
-                doc.text(academicData.totalMarks.toString(), 80, yPosition);
-                yPosition += 7;
+            
+            const summaryInfo = [
+                ['Total Marks', formData.totalMarks],
+                ['Percentage', formData.percentage ? `${formData.percentage}%` : null],
+                ['Cutoff', formData.cutoff],
+                ['Eligibility', formData.eligibility],
+            ];
+
+            summaryInfo.forEach(([label, value]) => {
+                if (value) {
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(`${label}:`, 20, yPosition);
+                    doc.text(value.toString(), 80, yPosition);
+                    yPosition += 7;
+                }
+            });
+        }
+
+        // Dropout details (if applicable)
+        if (formData.courseType === 'Dropout') {
+            yPosition += 5;
+            if (yPosition > 250) {
+                doc.addPage();
+                yPosition = 20;
             }
-            if (academicData.percentage) {
-                doc.text('Percentage:', 20, yPosition);
-                doc.text(`${academicData.percentage}%`, 80, yPosition);
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(12);
+            doc.text('College Dropout Details', 20, yPosition);
+            yPosition += 10;
+
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            
+            const dropoutInfo = [
+                ['Previous College', formData.previousCollege || 'N/A'],
+                ['Registration Number', formData.dropoutRegNo || 'N/A'],
+                ['Year of Study', formData.dropoutYearOfStudy || 'N/A'],
+            ];
+
+            dropoutInfo.forEach(([label, value]) => {
+                if (yPosition > 270) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                doc.text(`${label}:`, 20, yPosition);
+                doc.text(value, 80, yPosition);
                 yPosition += 7;
-            }
-            if (academicData.cutoff) {
-                doc.text('Cutoff:', 20, yPosition);
-                doc.text(academicData.cutoff.toString(), 80, yPosition);
-                yPosition += 7;
-            }
+            });
         }
 
         // Footer

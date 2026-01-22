@@ -36,8 +36,9 @@ export default function Dashboard() {
       .then(data => {
         // Ensure data is an array, not an error object
         if (Array.isArray(data)) {
-          setApplications(data);
-          console.log("✅ Applications refreshed, total:", data.length);
+          // Reverse to show latest submissions first (stack/LIFO method)
+          setApplications(data.reverse());
+
         } else if (data && data.error) {
           console.error("API Error:", data.error);
           setApplications([]);
@@ -60,7 +61,11 @@ export default function Dashboard() {
     const matchesSearch =
       (app.fullName && app.fullName.toLowerCase().includes(search.toLowerCase())) ||
       (app.email && app.email.toLowerCase().includes(search.toLowerCase())) ||
-      (app.enquiryId && app.enquiryId.toLowerCase().includes(search.toLowerCase()));
+      (app.enquiryId && app.enquiryId.toLowerCase().includes(search.toLowerCase())) ||
+      (app.admissionId && app.admissionId.toLowerCase().includes(search.toLowerCase())) ||
+      (app.firstPreference && app.firstPreference.toLowerCase().includes(search.toLowerCase())) ||
+      (app.preference1 && app.preference1.toLowerCase().includes(search.toLowerCase())) ||
+      (app.department && app.department.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = filterStatus === "All" || app.status === filterStatus;
     return matchesSearch && matchesStatus;
   }) : [];
@@ -262,7 +267,7 @@ export default function Dashboard() {
               <div className="relative flex-1 max-w-md">
                 <input
                   type="text"
-                  placeholder="Search student, Email ID or Enquiry ID..."
+                  placeholder="Search Student Name, Enquiry ID, Admission ID, Dept."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full rounded-xl border-gray-200 pl-11 pr-4 py-2.5 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm placeholder:text-gray-400"
@@ -288,6 +293,7 @@ export default function Dashboard() {
                   <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
                     <th className="px-6 py-4">Student Details</th>
                     <th className="px-6 py-4">Enquiry ID</th>
+                    <th className="px-6 py-4">Admission ID</th>
                     <th className="px-6 py-4">1st Preference</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">Submitted</th>
@@ -299,18 +305,22 @@ export default function Dashboard() {
                     <tr key={(app.enquiryId || app.email) + '-' + idx} className="hover:bg-blue-50/30 transition-colors group">
                       <td className="px-6 py-5">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                          {/* <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
                             {(app.fullName && app.fullName.charAt(0)) || "?"}
-                          </div>
+                          </div> */}
                           <div className="ml-4">
                             <div className="text-sm font-bold text-gray-900">{app.fullName || "No Name"}</div>
-                            <div className="text-xs text-gray-500 font-medium">{app.email || "No Email"}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
                           {app.enquiryId || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="font-mono text-xs font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                          {app.admissionId || "N/A"}
                         </span>
                       </td>
                       <td className="px-6 py-5">

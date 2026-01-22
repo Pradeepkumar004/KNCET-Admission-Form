@@ -143,6 +143,7 @@ export default function PDFPreviewModal({
           
           const numKids = kidsArray.size();
           let foundMatch = false;
+          let availableOptions = []; // Track all available options
           
           for (let i = 0; i < numKids; i++) {
             try {
@@ -158,6 +159,11 @@ export default function PDFPreviewModal({
                 if (n && n.entries) {
                   for (const [key, val] of n.entries()) {
                     const keyStr = key.decodeText ? key.decodeText() : key.toString().replace(/^\//, '');
+                    
+                    // Collect all available options (excluding 'Off')
+                    if (keyStr !== 'Off' && !availableOptions.includes(keyStr)) {
+                      availableOptions.push(keyStr);
+                    }
                     
                     if (keyStr === exportValue && keyStr !== 'Off') {
                       // Set the appearance state to the export value
@@ -180,6 +186,9 @@ export default function PDFPreviewModal({
           
           if (!foundMatch) {
             console.warn(`⚠ Export value '${exportValue}' not found in ${fieldName}`);
+            if (availableOptions.length > 0) {
+              console.warn(`   Available options in ${fieldName}:`, availableOptions);
+            }
           }
           return foundMatch;
         } catch (error) {
@@ -239,33 +248,47 @@ export default function PDFPreviewModal({
         setCheckboxInGroup('gender', 'female');
       }
 
-      // Department checkboxes
+      // Department checkboxes - comprehensive mapping
       const deptMapping = {
+        // Short forms
         'AI & DS': 'ad-dept',
+        'AIDS': 'ad-dept',
         'BME': 'bme-dept',
         'Civil': 'civil-dept',
+        'CIVIL': 'civil-dept',
         'CSE': 'cse-dept',
         'ECE': 'ece-dept',
         'EEE': 'eee-dept',
         'IT': 'it-dept',
         'Mechanical': 'mech-dept',
+        'MECH': 'mech-dept',
         'Agriculture': 'age-dept',
+        'AGRI': 'age-dept',
+        // Full forms with parentheses
         'AD(Artificial and Data Science Engineering)': 'ad-dept',
+        'AIDS(Artificial Intelligence and Data Science Engineering)': 'ad-dept',
         'BME(Bio Medical Engineering)': 'bme-dept',
         'BME(Bio-Medical Engineering)': 'bme-dept',
         'CIVIL(Civil Engineering)': 'civil-dept',
         'CSE(Computer Science and Engineering)': 'cse-dept',
         'ECE(Electronics and Communication Engineering)': 'ece-dept',
+        'ECE(Electronics and Communication Engineering )': 'ece-dept',
         'EEE(Electrical and Electronics Engineering)': 'eee-dept',
         'IT(Information Technology)': 'it-dept',
         'MECH(Mechanical Engineering)': 'mech-dept',
         'AGRI(Agricultural Engineering)': 'age-dept'
       };
       
-      // Only check the first preference in PDF
-      if (studentData.preference1 && deptMapping[studentData.preference1]) {
-        const fieldName = deptMapping[studentData.preference1];
+      // Get first preference and try to map it
+      const firstPref = studentData.preference1 || studentData.firstPreference || '';
+      console.log('  • First Preference:', firstPref);
+      
+      if (firstPref && deptMapping[firstPref]) {
+        const fieldName = deptMapping[firstPref];
+        console.log(`  ✓ Mapping '${firstPref}' to '${fieldName}'`);
         setCheckbox(fieldName, true);
+      } else if (firstPref) {
+        console.warn(`  ⚠ Department '${firstPref}' not found in mapping`);
       }
       
       // Branch awarded
@@ -320,30 +343,72 @@ export default function PDFPreviewModal({
         setCheckboxInGroup('first-graduate', 'no');
       }
 
-      // Student type
-      const studentTypeMap = {
-        'BoysHostel': 'boys-hostel',
-        'GirlsHostel': 'girls-hostel'
-      };
+      // Student type and Travel type
+      console.log('\n🎓 Student Type Mapping...');
+      console.log('  • Accommodation:', studentData.accommodation);
+      console.log('  • Travel Type:', studentData.travelType);
       
-      if (studentData.accommodation && studentTypeMap[studentData.accommodation]) {
-        setCheckboxInGroup('student-type', studentTypeMap[studentData.accommodation]);
+      if (studentData.accommodation === 'BoysHostel' || studentData.accommodation === 'BOYSHOSTEL') {
+        console.log('  ✓ Setting student-type to: boys-hostel');
+        setCheckboxInGroup('student-type', 'boys-hostel');
+      } else if (studentData.accommodation === 'GirlsHostel' || studentData.accommodation === 'GIRLSHOSTEL') {
+        console.log('  ✓ Setting student-type to: girls-hostel');
+        setCheckboxInGroup('student-type', 'girls-hostel');
+      } else if (studentData.accommodation === 'DayScholar' || studentData.accommodation === 'DAYSCHOLAR') {
+        // For day scholars, the student-type IS the travel type (no separate day-scholar checkbox exists)
+        // The PDF template only has: boys-hostel, girls-hostel, college-bus, out-bus
+        if (studentData.travelType === 'CollegeBus') {
+          console.log('  ✓ Setting student-type to: college-bus (Day Scholar with College Bus)');
+          setCheckboxInGroup('student-type', 'college-bus');
+        } else if (studentData.travelType === 'OutBus') {
+          console.log('  ✓ Setting student-type to: out-bus (Day Scholar with Out Bus)');
+          setCheckboxInGroup('student-type', 'out-bus');
+        } else {
+          console.warn('  ⚠ Day scholar without travel type specified - cannot set student-type checkbox');
+          console.warn('  ⚠ Available options are: boys-hostel, girls-hostel, college-bus, out-bus');
+        }
       }
       
-      // Day Scholar checkbox
-      if (studentData.accommodation === 'DayScholar') {
-        setCheckbox('student-type.days-scholar', true);
-      }
-      
-      // Travel type
-      if (studentData.travelType === 'CollegeBus') {
-        setCheckboxInGroup('student-type', 'college-bus');
-      } else if (studentData.travelType === 'OutBus') {
-        setCheckboxInGroup('student-type', 'out-bus');
-      }
+      console.log('✅ Student Type mapping completed\n');
 
-      // Bus details
-      setTextField('bus-stop', studentData.busStopName || '');
+      // Bus details and Room Type mapping
+      console.log('\n🚌 Bus/Room Type Mapping...');
+      console.log('  • Accommodation:', studentData.accommodation);
+      console.log('  • Room Type (raw):', studentData.roomType);
+      console.log('  • Bus Stop Name:', studentData.busStopName);
+      
+      if (studentData.accommodation === 'BoysHostel' || studentData.accommodation === 'GirlsHostel' || 
+          studentData.accommodation === 'BOYSHOSTEL' || studentData.accommodation === 'GIRLSHOSTEL') {
+        // Map room type to simplified format for PDF
+        let roomTypeText = '';
+        const roomType = (studentData.roomType || '').toLowerCase();
+        
+        // Check for different room type formats
+        if (roomType.includes('normal') || roomType.includes('(n)') || roomType === 'normal1' || roomType === 'normal2' || roomType === 'normal3' || roomType === 'normal4') {
+          roomTypeText = 'Normal';
+        } else if (roomType.includes('attach') && !roomType.includes('ac')) {
+          roomTypeText = 'Attached';
+        } else if (roomType.includes('ac') || roomType.includes('a/c')) {
+          roomTypeText = 'AC Attached';
+        } else if (roomType) {
+          // If room type exists but doesn't match patterns, use it as-is
+          roomTypeText = studentData.roomType;
+        }
+        
+        console.log('  • Room Type (mapped):', roomTypeText);
+        console.log('  ✅ Setting bus-stop field to:', roomTypeText);
+        setTextField('bus-stop', roomTypeText);
+        console.log('  ✅ Setting bus-stop-room-type field to: Room Type');
+        setTextField('bus-stop-room-type', 'Room Type');
+      } else {
+        // Day scholar - use bus stop name
+        console.log('  ✅ Setting bus-stop field to:', studentData.busStopName || '');
+        setTextField('bus-stop', studentData.busStopName || '');
+        console.log('  ✅ Setting bus-stop-room-type field to: Bus Stop');
+        setTextField('bus-stop-room-type', 'Bus Stop');
+      }
+      
+      console.log('✅ Bus/Room Type mapping completed\n');
 
       // Address Details
       setTextField('address-line-1', studentData.address1 || '');

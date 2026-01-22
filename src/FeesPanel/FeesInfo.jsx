@@ -155,7 +155,7 @@ const FeeStructure = () => {
   const [selectedDepartment, setSelectedDepartment] = useState("");
 
   const departments = [
-    "AD", "BME", "CSE", "CIVIL", "ECE", "EEE", "IT", "MECH"
+    "AIDs", "AGRI", "BME", "CSE", "CIVIL", "ECE", "EEE", "IT", "MECH"
   ];
 
   const handleSubmit = async () => {

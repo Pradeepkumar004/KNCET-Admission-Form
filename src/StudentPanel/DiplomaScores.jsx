@@ -41,16 +41,12 @@ const DiplomaScores = ({ personalData }) => {
       return;
     }
 
-    if (!fifthSemMarks || !sixthSemMarks) {
-      alert("Please enter marks for 5th and 6th semesters");
+    if (!fifthSemMarks ) {
+      alert("Please enter marks for 5th semester");
       return;
     }
 
-    // Check if personal data is available
-    if (!personalData || !personalData.fullName) {
-      alert("Error: Personal information not found. Please complete Personal Information form first.");
-      return;
-    }
+    
 
     setIsLoading(true);
 
@@ -72,9 +68,6 @@ const DiplomaScores = ({ personalData }) => {
         subject1Marks: fifthSemMarks,
         subject2: "1st to 6th Semester",
         subject2Marks: sixthSemMarks,
-        totalMarks: (parseFloat(fifthSemMarks) + parseFloat(sixthSemMarks)) / 2,
-        percentage: ((parseFloat(fifthSemMarks) + parseFloat(sixthSemMarks)) / 2),
-        cutoff: ((parseFloat(fifthSemMarks) + parseFloat(sixthSemMarks)) / 2),
         date: new Date().toISOString()
       };
 

@@ -50,28 +50,25 @@ const AcademicScores = ({ personalData }) => {
     }
 
     // Check if all scores are entered
-    const allScoresEntered = scores.every(s => s.obtained && s.obtained.trim() !== "");
-    if (!allScoresEntered) {
-      alert("Please enter marks for all subjects");
-      return;
-    }
+    
 
-    // Check if personal data is available
-    if (!personalData || !personalData.fullName) {
-      alert("Error: Personal information not found. Please complete Personal Information form first.");
-      return;
-    }
+    // Get personal data from localStorage instead of props
+    const storedPersonalData = JSON.parse(localStorage.getItem('submittedFormData') || '{}');
+    
 
     setIsLoading(true);
 
     try {
       console.log("Submitting combined personal and HSC State Board data...");
       
+      // Remove the 'initial' field as it's already combined in fullName (if it exists)
+      const { initial, ...cleanedPersonalData } = storedPersonalData;
+      
       // Combine personal info + scores data into single submission
       const combinedData = {
         action: "submitStudentData",
-        // Personal info fields
-        ...personalData,
+        // Personal info fields (without 'initial')
+        ...cleanedPersonalData,
         // Score fields
         courseType: "HSC",
         schoolName,
@@ -113,7 +110,7 @@ const AcademicScores = ({ personalData }) => {
       if (result.success && result.enquiryId) {
         // Save enquiry ID to localStorage
         localStorage.setItem('enquiryId', result.enquiryId);
-        localStorage.setItem('studentName', personalData.fullName);
+        localStorage.setItem('studentName', cleanedPersonalData.fullName);
         
         setIsLoading(false);
         navigate("/success", { state: { enquiryId: result.enquiryId } });
@@ -199,8 +196,8 @@ const AcademicScores = ({ personalData }) => {
         <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-2xl font-bold text-blue-900">Submitting Scores...</p>
-            <p className="text-sm text-gray-600 mt-2">Please wait while we save your scores</p>
+            <p className="text-2xl font-bold text-blue-900">Submitting</p>
+            <p className="text-sm text-gray-600 mt-2">Please wait while we save your Details</p>
           </div>
         </div>
       )}
@@ -215,7 +212,7 @@ const AcademicScores = ({ personalData }) => {
         <div className="p-8 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">School Name & Place <span className="text-red-600">*</span></label>
               <input
                 type="text"
                 value={schoolName}
@@ -227,7 +224,7 @@ const AcademicScores = ({ personalData }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Register Number <span className="text-red-600">*</span></label>
               <input
                 type="text"
                 value={registerNumber}
@@ -242,7 +239,7 @@ const AcademicScores = ({ personalData }) => {
 
           <div className="grid grid-cols-2 gap-4 mt-5">
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Medium of Study <span className="text-red-600">*</span></label>
               <select
                 value={mediumOfStudy}
                 onChange={(e) => setMediumOfStudy(e.target.value)}
@@ -267,7 +264,7 @@ const AcademicScores = ({ personalData }) => {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Year of Passing <span className="text-red-600">*</span></label>
               <input
                 type="text"
                 value={yearOfPassing}

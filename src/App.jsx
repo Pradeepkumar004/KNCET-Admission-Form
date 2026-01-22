@@ -4,6 +4,7 @@ import './App.css'
 import PersonalInfo from './StudentPanel/PersonalInfo'
 import AcademicScores from './StudentPanel/AcadamicScore'
 import FeesInfo from './FeesPanel/FeesInfo'
+import FeesSuccess from './FeesPanel/FeesSuccess'
 import VocationalScores from './StudentPanel/Vocational'
 import Sucess from './StudentPanel/success'
 import AdminSuccess from './AdminPanel/success'
@@ -47,6 +48,11 @@ function App() {
         <Route path='/feesInfo' element={
           <ProtectedRoute>
             <FeesInfo />
+          </ProtectedRoute>
+        } />
+        <Route path='/fees-success' element={
+          <ProtectedRoute>
+            <FeesSuccess />
           </ProtectedRoute>
         } />
 
