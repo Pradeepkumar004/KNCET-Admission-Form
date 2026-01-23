@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Nav from "../Nav";
 import PDFPreviewModal from '../AdminPanel/PDFPreviewModal';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlKdwAYiJ-Cw_Iy3ntPJrZgj2AhCD7XN8ekA4FYmyxHmIVjtkZZBR-SmDas7mfRaPR5g/exec";
+const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_ADMIN_URL;
 
 const FeeStructure = () => {
   const navigate = useNavigate();

@@ -226,7 +226,7 @@ const Login = () => {
             </div>
 
             {/* Sign Up Link */}
-            <div className="text-center pt-4 border-t border-gray-200">
+            {/* <div className="text-center pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
                 <Link 
@@ -236,13 +236,13 @@ const Login = () => {
                   Create an account
                 </Link>
               </p>
-            </div>
+            </div> */}
           </form>
 
           {/* Footer Note */}
-          <div className="text-center text-xs text-gray-500 pt-6">
+          {/* <div className="text-center text-xs text-gray-500 pt-6">
             <p>By signing in, you agree to our Terms of Service and Privacy Policy</p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

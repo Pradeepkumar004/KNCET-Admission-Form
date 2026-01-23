@@ -344,7 +344,7 @@ const PersonalInfo = () => {
       console.log('Submitting dropout student data:', dropoutSubmissionData);
 
       // Google Apps Script endpoint
-      const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyksQyXlpXq4IbzeTymBf1Jla1KIMsAGseNIciIJb-BRON5RuCdMYT-b9BdwpOzMoBThQ/exec";
+      const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_STUDENT_URL;
       const params = new URLSearchParams(dropoutSubmissionData).toString();
       const url = `${GOOGLE_SCRIPT_URL}?${params}`;
 

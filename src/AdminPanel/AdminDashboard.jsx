@@ -5,7 +5,7 @@ import { SearchIcon } from "@heroicons/react/solid";
 import Nav from "../Nav";
 import EditApplicationModal from "./EditApplicationModal";
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlKdwAYiJ-Cw_Iy3ntPJrZgj2AhCD7XN8ekA4FYmyxHmIVjtkZZBR-SmDas7mfRaPR5g/exec";
+const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_ADMIN_URL;
 
 // Format ISO date to readable format
 const formatDate = (dateString) => {

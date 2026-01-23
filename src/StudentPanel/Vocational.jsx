@@ -23,7 +23,7 @@ const VocationalScores = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     // Google Apps Script endpoint
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyksQyXlpXq4IbzeTymBf1Jla1KIMsAGseNIciIJb-BRON5RuCdMYT-b9BdwpOzMoBThQ/exec";
+    const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_STUDENT_URL;
 
     // Get enquiry ID from localStorage (set by PersonalInfo component)
     const enquiryId = localStorage.getItem("enquiryId");

@@ -12,7 +12,7 @@ const Sucess = () => {
     const [studentStatus, setStudentStatus] = React.useState("");
     const [studentData, setStudentData] = React.useState(null);
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0xrX0EZirHB0kCkS3imlILIsRU7cxYRKRtawt-uw0Whr-t5g4Kys9UC8mo-UFvJb8PQ/exec";
+    const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_SCORES_URL;
 
     React.useEffect(() => {
         setShowToast(true);
