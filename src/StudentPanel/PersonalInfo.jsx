@@ -884,7 +884,7 @@ const PersonalInfo = () => {
           <div id="academic-scores-section" className="mt-8">
             {formData.lastStudies === 'Diploma' && <DiplomaScores personalData={formData} />}
             {formData.lastStudies === 'CBSE' && <CBSEScore personalData={formData} />}
-            {formData.lastStudies === 'HSC Vocational' && <VocationalScores personalData={formData} />}
+            {formData.lastStudies === 'Vocational' && <VocationalScores personalData={formData} />}
             {formData.lastStudies === 'HSC' && <AcademicScores personalData={formData} />}
           </div>
         )}

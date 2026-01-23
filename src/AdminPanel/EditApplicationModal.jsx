@@ -447,6 +447,12 @@ export default function EditApplicationModal({
         updated.dropoutYear = '';
       }
 
+      // When lastStudies changes, update the academic section to match
+      if (field === 'lastStudies') {
+        // Update scoresData courseType to match lastStudies
+        setScoresData(prev => ({ ...prev, courseType: value }));
+      }
+
       // Handle accommodation changes
       if (field === 'accommodation') {
         if (value === 'DayScholar') {
@@ -2033,22 +2039,6 @@ export default function EditApplicationModal({
 
                   {/* Course Details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded-lg">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Course Type</label>
-                      <select
-                        value={scoresData.courseType || ""}
-                        onChange={(e) => {
-                          setScoresData(prev => ({ ...prev, courseType: e.target.value }));
-                        }}
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="">Select Course Type</option>
-                        <option value="HSC">HSC</option>
-                        <option value="CBSE">CBSE</option>
-                        <option value="Vocational">Vocational</option>
-                        <option value="Diploma">Diploma</option>
-                      </select>
-                    </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">School/Board Name</label>
                       <input
