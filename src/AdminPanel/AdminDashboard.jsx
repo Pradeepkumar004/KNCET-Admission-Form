@@ -31,24 +31,41 @@ export default function Dashboard() {
 
   // Fetch all applications
   const fetchApplications = () => {
+    console.log("🔄 Fetching applications from:", GOOGLE_SCRIPT_URL);
     fetch(GOOGLE_SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
+        console.log("📥 Raw data received:", data);
+        console.log("📊 Data type:", Array.isArray(data) ? 'Array' : typeof data);
+        console.log("📝 Data length:", Array.isArray(data) ? data.length : 'N/A');
+        
         // Ensure data is an array, not an error object
         if (Array.isArray(data)) {
+          if (data.length > 0) {
+            console.log("✅ First record sample:");
+            console.log(data[0]);
+            console.log("📋 Available fields in first record:");
+            console.table(Object.keys(data[0]));
+            
+            // ✅ CRITICAL DEBUG: Check gender and accommodation fields
+            console.log("🔍 DEBUG - First record gender:", data[0].gender);
+            console.log("🔍 DEBUG - First record accommodation:", data[0].accommodation);
+            console.log("🔍 DEBUG - First record roomType:", data[0].roomType);
+            console.log("🔍 DEBUG - First record travelType:", data[0].travelType);
+          }
           // Reverse to show latest submissions first (stack/LIFO method)
           setApplications(data.reverse());
 
         } else if (data && data.error) {
-          console.error("API Error:", data.error);
+          console.error("❌ API Error:", data.error);
           setApplications([]);
         } else {
-          console.error("Unexpected response format:", data);
+          console.error("❌ Unexpected response format:", data);
           setApplications([]);
         }
       })
       .catch(err => {
-        console.error("Failed to fetch data", err);
+        console.error("❌ Failed to fetch data:", err);
         setApplications([]);
       });
   };

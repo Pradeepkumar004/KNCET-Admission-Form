@@ -355,17 +355,19 @@ export default function PDFPreviewModal({
         console.log('  ✓ Setting student-type to: girls-hostel');
         setCheckboxInGroup('student-type', 'girls-hostel');
       } else if (studentData.accommodation === 'DayScholar' || studentData.accommodation === 'DAYSCHOLAR') {
-        // For day scholars, the student-type IS the travel type (no separate day-scholar checkbox exists)
-        // The PDF template only has: boys-hostel, girls-hostel, college-bus, out-bus
+        // Day Scholar has a separate checkbox field
+        console.log('  ✓ Setting days-scholar checkbox');
+        setCheckbox('days-scholar', true);
+      }
+      
+      // Travel type for day scholars (college-bus or out-bus)
+      if ((studentData.accommodation === 'DayScholar' || studentData.accommodation === 'DAYSCHOLAR') && studentData.travelType) {
         if (studentData.travelType === 'CollegeBus') {
-          console.log('  ✓ Setting student-type to: college-bus (Day Scholar with College Bus)');
+          console.log('  ✓ Setting student-type to: college-bus');
           setCheckboxInGroup('student-type', 'college-bus');
         } else if (studentData.travelType === 'OutBus') {
-          console.log('  ✓ Setting student-type to: out-bus (Day Scholar with Out Bus)');
+          console.log('  ✓ Setting student-type to: out-bus');
           setCheckboxInGroup('student-type', 'out-bus');
-        } else {
-          console.warn('  ⚠ Day scholar without travel type specified - cannot set student-type checkbox');
-          console.warn('  ⚠ Available options are: boys-hostel, girls-hostel, college-bus, out-bus');
         }
       }
       
@@ -559,13 +561,18 @@ export default function PDFPreviewModal({
       // Calculate Physics-Chemistry Cutoff: (Physics + Chemistry) / 2
       const physicsChemistryCutoff = ((physicsMarks + chemistryMarks) / 2).toFixed(2);
       
+      // Calculate Engineering Eligibility Mark: Physics + Chemistry + Mathematics
+      const engineeringEligibilityMark = (physicsMarks + chemistryMarks + mathsMarks);
+      
       console.log('  • Physics Marks:', physicsMarks);
       console.log('  • Chemistry Marks:', chemistryMarks);
       console.log('  • Physics-Chemistry Cutoff:', physicsChemistryCutoff);
       console.log('  • Maths Marks:', mathsMarks);
+      console.log('  • Engineering Eligibility Mark:', engineeringEligibilityMark);
       
       setTextField('physics-chemistry-cutoff', physicsChemistryCutoff);
       setTextField('maths-cutoff', mathsMarks.toString());
+      setTextField('engineering-eligibility-mark', engineeringEligibilityMark);
 
       // Reference Information
       setTextField('know-about-this-college', studentData.knowAbout || '');

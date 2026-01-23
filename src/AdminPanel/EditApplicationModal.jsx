@@ -82,14 +82,135 @@ export default function EditApplicationModal({
   // Sync editData with applicationData when modal opens or data changes
   useEffect(() => {
     if (applicationData) {
-      setEditData(applicationData);
-      // Set bus stop search to existing value
-      setBusStopSearch(applicationData.busStopName || '');
-      
-      // Fetch scores for this student
-      if (applicationData.enquiryId) {
-        fetchStudentScores(applicationData.enquiryId);
+      // Normalize quota values (convert MQ/GQ to full names)
+      const normalizedData = { ...applicationData };
+      if (normalizedData.quota === 'MQ') {
+        normalizedData.quota = 'Management';
+      } else if (normalizedData.quota === 'GQ') {
+        normalizedData.quota = 'Government';
       }
+      
+      // Normalize firstGrad and govtSchool (YES/NO to Yes/No)
+      if (normalizedData.firstGrad === 'YES') {
+        normalizedData.firstGrad = 'Yes';
+      } else if (normalizedData.firstGrad === 'NO') {
+        normalizedData.firstGrad = 'No';
+      }
+      
+      if (normalizedData.govtSchool === 'YES') {
+        normalizedData.govtSchool = 'Yes';
+      } else if (normalizedData.govtSchool === 'NO') {
+        normalizedData.govtSchool = 'No';
+      }
+      
+      // ✅ FIX: Normalize gender values (MALE/FEMALE to Male/Female)
+      if (normalizedData.gender === 'MALE') {
+        normalizedData.gender = 'Male';
+      } else if (normalizedData.gender === 'FEMALE') {
+        normalizedData.gender = 'Female';
+      }
+      // Handle already normalized versions
+      if (normalizedData.gender === 'male') {
+        normalizedData.gender = 'Male';
+      } else if (normalizedData.gender === 'female') {
+        normalizedData.gender = 'Female';
+      }
+      
+      // ✅ FIX: Normalize accommodation values (uppercase to mixed case)
+      if (normalizedData.accommodation === 'BOYSHOSTEL') {
+        normalizedData.accommodation = 'BoysHostel';
+      } else if (normalizedData.accommodation === 'GIRLSHOSTEL') {
+        normalizedData.accommodation = 'GirlsHostel';
+      } else if (normalizedData.accommodation === 'DAYSCHOLAR') {
+        normalizedData.accommodation = 'DayScholar';
+      }
+      // Handle already normalized versions
+      if (normalizedData.accommodation === 'boyshostel') {
+        normalizedData.accommodation = 'BoysHostel';
+      } else if (normalizedData.accommodation === 'girlshostel') {
+        normalizedData.accommodation = 'GirlsHostel';
+      } else if (normalizedData.accommodation === 'dayscholar') {
+        normalizedData.accommodation = 'DayScholar';
+      }
+      
+      // ✅ FIX: Normalize roomType values (StudentPanel format to EditModal format)
+      if (normalizedData.roomType) {
+        // Handle StudentPanel format (with spaces and parentheses)
+        if (normalizedData.roomType.includes('BOYS HOSTEL (N)') || normalizedData.roomType.includes('GIRLS HOSTEL (N)')) {
+          normalizedData.roomType = 'Normal4';
+        } else if (normalizedData.roomType.includes('BOYS HOSTEL (A)') || normalizedData.roomType.includes('GIRLS HOSTEL (A)')) {
+          normalizedData.roomType = 'Attach3';
+        } else if (normalizedData.roomType.includes('BOYS HOSTEL (AC)') || normalizedData.roomType.includes('GIRLS HOSTEL (AC)')) {
+          normalizedData.roomType = 'AC2';
+        }
+        // Handle lowercase versions
+        else if (normalizedData.roomType === 'normal4' || normalizedData.roomType === 'Normal (4 Members)') {
+          normalizedData.roomType = 'Normal4';
+        } else if (normalizedData.roomType === 'attach3' || normalizedData.roomType === 'Attached Bath (3 Members)') {
+          normalizedData.roomType = 'Attach3';
+        } else if (normalizedData.roomType === 'ac2' || normalizedData.roomType === 'AC + Attached (2 Members)') {
+          normalizedData.roomType = 'AC2';
+        }
+      }
+      
+      // ✅ FIX: Normalize travelType values (StudentPanel format to EditModal format)
+      if (normalizedData.travelType === 'COLLEGEBUS') {
+        normalizedData.travelType = 'CollegeBus';
+      } else if (normalizedData.travelType === 'OUTBUS') {
+        normalizedData.travelType = 'OutBus';
+      }
+      // Handle lowercase versions
+      else if (normalizedData.travelType === 'collegebus') {
+        normalizedData.travelType = 'CollegeBus';
+      } else if (normalizedData.travelType === 'outbus') {
+        normalizedData.travelType = 'OutBus';
+      }
+      
+      setEditData(normalizedData);
+      // Set bus stop search to existing value
+      setBusStopSearch(normalizedData.busStopName || '');
+      
+      // Log all loaded data for debugging
+      console.log("📂 MODAL OPENED: Loading student data from dashboard");
+      console.log("📊 Application Data loaded (field count):", Object.keys(normalizedData).length);
+      console.log("📋 Fields available:");
+      console.table(Object.keys(normalizedData));
+      console.log("📄 Full applicationData object:");
+      console.log(normalizedData);
+      
+      // ✅ CRITICAL DEBUG: Log gender and accommodation values
+      console.log("🔍 DEBUG - Gender field value:", normalizedData.gender);
+      console.log("🔍 DEBUG - Accommodation field value:", normalizedData.accommodation);
+      console.log("🔍 DEBUG - Room Type field value:", normalizedData.roomType);
+      console.log("🔍 DEBUG - Travel Type field value:", normalizedData.travelType);
+      
+      // Populate scoresData from applicationData (all in one sheet now)
+      const scoresObj = {
+        courseType: normalizedData.courseType || '',
+        registerNumber: normalizedData.registerNumber || '',
+        medium: normalizedData.medium || '',
+        yearOfPassing: normalizedData.yearOfPassing || '',
+        schoolName: normalizedData.schoolName || '',
+        subject1: normalizedData.subject1 || '',
+        subject1Marks: normalizedData.subject1Marks || '',
+        subject2: normalizedData.subject2 || '',
+        subject2Marks: normalizedData.subject2Marks || '',
+        subject3: normalizedData.subject3 || '',
+        subject3Marks: normalizedData.subject3Marks || '',
+        subject4: normalizedData.subject4 || '',
+        subject4Marks: normalizedData.subject4Marks || '',
+        subject5: normalizedData.subject5 || '',
+        subject5Marks: normalizedData.subject5Marks || '',
+        subject6: normalizedData.subject6 || '',
+        subject6Marks: normalizedData.subject6Marks || '',
+        totalMarks: normalizedData.totalMarks || '',
+        percentage: normalizedData.percentage || '',
+        cutoff: normalizedData.cutoff || '',
+        eligibility: normalizedData.eligibility || '',
+        date: normalizedData.date || ''
+      };
+      setScoresData(scoresObj);
+      console.log("✅ Scores data populated from main application data");
     }
   }, [applicationData]);
 
@@ -682,7 +803,7 @@ export default function EditApplicationModal({
       
       // Day Scholar checkbox
       if (editData.accommodation === 'DayScholar') {
-        setCheckbox('student-type.days-scholar', true);
+        setCheckbox('days-scholar', true);
       }
 
       // Travel type (college-bus or out-bus)
@@ -883,12 +1004,43 @@ export default function EditApplicationModal({
       const params = new URLSearchParams();
       params.append("action", "updatePersonalInfo");
       
-      for (const [key, value] of Object.entries(editData)) {
+      // Prepare all data including admin-only fields
+      const dataToSend = {
+        ...editData,
+        // Ensure all admin-editable fields are included
+        status: editData.status || "Pending",
+        date: editData.date || new Date().toISOString(),
+        admissionId: editData.admissionId || "",
+        branchAwarded: editData.branchAwarded || "",
+        busStopName: editData.busStopName || "",
+        busRoute: editData.busRoute || "",
+        busNo: editData.busNo || "",
+        busFees: editData.busFees || "",
+        knowAbout: editData.knowAbout || "",
+        referenceName: editData.referenceName || "",
+        referenceContact: editData.referenceContact || "",
+        dropoutCollege: editData.dropoutCollege || "",
+        dropoutRegisterNo: editData.dropoutRegisterNo || "",
+        dropoutYear: editData.dropoutYear || ""
+      };
+      
+      // Log all fields being sent to backend for debugging
+      console.log("📤 HANDLEAVE: SENDING DATA TO BACKEND - All editData fields:");
+      console.table(dataToSend);
+      
+      for (const [key, value] of Object.entries(dataToSend)) {
         params.append(key, value);
       }
+      
+      console.log("📝 URL Parameters being sent (first 500 chars):");
+      const paramString = params.toString();
+      console.log(paramString.substring(0, 500) + "...");
+      console.log("📊 Total fields being sent:", Object.keys(dataToSend).length);
 
       const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
       const responseData = await response.json();
+      
+      console.log("📥 Response from backend:", responseData);
 
       // Check if the response indicates success
       if (!responseData.success) {
@@ -926,51 +1078,6 @@ export default function EditApplicationModal({
           console.log("✅ Scores saved successfully for enquiry ID: " + editData.enquiryId);
         } else {
           console.error("❌ Failed to save scores:", scoresResult.message);
-        }
-      }
-
-      // Step 3: Save fees data via GET method if fees fields exist (avoids CORS)
-      const feeFields = ["tuitionFee", "developmentFee", "admissionFee", "cautionDeposit", 
-                         "optionalFees", "scStScholarship", "fgScholarship", "busFee", 
-                         "messBill", "roomRent", "laundryCharges", "feeSubTotal", 
-                         "feeCollegeTotal", "feeHostelTotal", "feeOverallTotal"];
-      
-      const feesData = {};
-      let hasFeeData = false;
-      for (const feeField of feeFields) {
-        if (editData[feeField] !== undefined && editData[feeField] !== null && editData[feeField] !== '') {
-          feesData[feeField] = editData[feeField];
-          hasFeeData = true;
-        }
-      }
-      
-      if (hasFeeData) {
-        console.log("💾 Saving fees data:", feesData);
-        feesData.enquiryId = editData.enquiryId;
-        feesData.admissionId = updatedEditData.admissionId || editData.admissionId || '';
-        feesData.fullName = editData.fullName || '';
-        feesData.quota = editData.quota || '';
-        feesData.status = editData.status || 'Pending'; // Include status with fees
-        
-        const feeParams = new URLSearchParams();
-        for (const [key, value] of Object.entries(feesData)) {
-          feeParams.append(key, value);
-        }
-        
-        console.log("📤 Sending fees to backend with query params (GET method)");
-        
-        const feesResponse = await fetch(GOOGLE_SCRIPT_URL + "?" + feeParams.toString());
-        
-        const feesResult = await feesResponse.json();
-        if (feesResult.success) {
-          console.log("✅ Fees data saved successfully");
-          // Update editData with fees information from response if available
-          if (feesResult.updatedData) {
-            updatedEditData = { ...updatedEditData, ...feesResult.updatedData };
-          }
-        } else {
-          console.error("❌ Failed to save fees data:", feesResult.message);
-          alert("Note: Personal info and scores saved but fees data save may have failed. Please try again.");
         }
       }
 
@@ -1004,12 +1111,42 @@ export default function EditApplicationModal({
       const params = new URLSearchParams();
       params.append("action", "updatePersonalInfo");
       
-      for (const [key, value] of Object.entries(editData)) {
+      // Prepare all data including admin-only fields
+      const dataToSend = {
+        ...editData,
+        // Ensure all admin-editable fields are included
+        status: editData.status || "Pending",
+        date: editData.date || new Date().toISOString(),
+        admissionId: editData.admissionId || "",
+        branchAwarded: editData.branchAwarded || "",
+        busStopName: editData.busStopName || "",
+        busRoute: editData.busRoute || "",
+        busNo: editData.busNo || "",
+        busFees: editData.busFees || "",
+        knowAbout: editData.knowAbout || "",
+        referenceName: editData.referenceName || "",
+        referenceContact: editData.referenceContact || "",
+        dropoutCollege: editData.dropoutCollege || "",
+        dropoutRegisterNo: editData.dropoutRegisterNo || "",
+        dropoutYear: editData.dropoutYear || ""
+      };
+      
+      // Log all fields being sent to backend for debugging
+      console.log("📤 SENDING DATA TO BACKEND - All editData fields:");
+      console.table(dataToSend);
+      console.log("📊 Total fields sending:", Object.keys(dataToSend).length);
+      
+      for (const [key, value] of Object.entries(dataToSend)) {
         params.append(key, value);
       }
+      
+      console.log("📝 URL Parameters being sent:");
+      console.log(params.toString().substring(0, 200) + "...");
 
       const response = await fetch(GOOGLE_SCRIPT_URL + "?" + params.toString());
       const responseData = await response.json();
+      
+      console.log("📥 Response from backend:", responseData);
 
       // Check if the response indicates success
       if (!responseData.success) {
@@ -1047,51 +1184,6 @@ export default function EditApplicationModal({
           console.log("✅ Scores saved successfully for enquiry ID: " + editData.enquiryId);
         } else {
           console.error("❌ Failed to save scores:", scoresResult.message);
-        }
-      }
-
-      // Step 3: Save fees data via GET method if fees fields exist (avoids CORS)
-      const feeFields = ["tuitionFee", "developmentFee", "admissionFee", "cautionDeposit", 
-                         "optionalFees", "scStScholarship", "fgScholarship", "busFee", 
-                         "messBill", "roomRent", "laundryCharges", "feeSubTotal", 
-                         "feeCollegeTotal", "feeHostelTotal", "feeOverallTotal"];
-      
-      const feesData = {};
-      let hasFeeData = false;
-      for (const feeField of feeFields) {
-        if (editData[feeField] !== undefined && editData[feeField] !== null && editData[feeField] !== '') {
-          feesData[feeField] = editData[feeField];
-          hasFeeData = true;
-        }
-      }
-      
-      if (hasFeeData) {
-        console.log("💾 Saving fees data:", feesData);
-        feesData.enquiryId = editData.enquiryId;
-        feesData.admissionId = updatedEditData.admissionId || editData.admissionId || '';
-        feesData.fullName = editData.fullName || '';
-        feesData.quota = editData.quota || '';
-        feesData.status = editData.status || 'Pending'; // Include status with fees
-        
-        const feeParams = new URLSearchParams();
-        for (const [key, value] of Object.entries(feesData)) {
-          feeParams.append(key, value);
-        }
-        
-        console.log("📤 Sending fees to backend with query params (GET method)");
-        
-        const feesResponse = await fetch(GOOGLE_SCRIPT_URL + "?" + feeParams.toString());
-        
-        const feesResult = await feesResponse.json();
-        if (feesResult.success) {
-          console.log("✅ Fees data saved successfully");
-          // Update editData with fees information from response if available
-          if (feesResult.updatedData) {
-            updatedEditData = { ...updatedEditData, ...feesResult.updatedData };
-          }
-        } else {
-          console.error("❌ Failed to save fees data:", feesResult.message);
-          alert("Note: Personal info and scores saved but fees data save may have failed. Please try again.");
         }
       }
 
@@ -1941,6 +2033,22 @@ export default function EditApplicationModal({
 
                   {/* Course Details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Course Type</label>
+                      <select
+                        value={scoresData.courseType || ""}
+                        onChange={(e) => {
+                          setScoresData(prev => ({ ...prev, courseType: e.target.value }));
+                        }}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Course Type</option>
+                        <option value="HSC">HSC</option>
+                        <option value="CBSE">CBSE</option>
+                        <option value="Vocational">Vocational</option>
+                        <option value="Diploma">Diploma</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">School/Board Name</label>
                       <input

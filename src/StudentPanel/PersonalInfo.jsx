@@ -334,9 +334,9 @@ const PersonalInfo = () => {
         schoolType: formData.schoolType,
         lastStudies: 'Dropout',
         // Dropout specific fields
-        previousCollege: dropoutData.previousCollege,
-        dropoutRegNo: dropoutData.regNo,
-        dropoutYearOfStudy: dropoutData.yearOfStudy,
+        dropoutCollege: dropoutData.previousCollege,
+        dropoutRegisterNo: dropoutData.regNo,
+        dropoutYear: dropoutData.yearOfStudy,
         courseType: 'Dropout',
         date: new Date().toISOString()
       };
